@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ceilings R Us - Campaign Command Center</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+  <div class="app" x-data="app()">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h1>Ceilings R Us</h1>
+        <div class="tagline">Campaign Command Center</div>
+      </div>
+
+      <ul class="nav">
+        <li>
+          <a href="#" class="nav-item" :class="{ active: currentView === 'overview' }" @click.prevent="currentView = 'overview'">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+            </svg>
+            Overview
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" :class="{ active: currentView === 'nextround' }" @click.prevent="currentView = 'nextround'">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            Next Round
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" :class="{ active: currentView === 'mailtest' }" @click.prevent="currentView = 'mailtest'">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Direct Mail Test
+          </a>
+        </li>
+        <li>
+          <a href="#" class="nav-item" :class="{ active: currentView === 'performance' }" @click.prevent="currentView = 'performance'">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Monthly Performance
+          </a>
+        </li>
+      </ul>
+
+      <div class="user-info" x-show="userEmail">
+        <div x-text="userEmail"></div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Overview View -->
+      <div x-show="currentView === 'overview'">
+        <div class="page-header">
+          <h2>Campaign Overview</h2>
+          <p class="subtitle">Active campaigns and their results</p>
+        </div>
+
+        <div class="campaign-grid">
+          <template x-if="campaigns.length === 0">
+            <div class="card">
+              <p style="color: var(--text-muted);">No campaigns yet. Create your first campaign to get started.</p>
+            </div>
+          </template>
+          <template x-for="campaign in campaigns" :key="campaign.id">
+            <div class="campaign-card" :class="campaign.channel">
+              <div class="campaign-name" x-text="campaign.name"></div>
+              <div class="campaign-meta">
+                <span class="badge" :class="'badge-' + campaign.status" x-text="campaign.status"></span>
+                &middot;
+                <span x-text="campaign.channel.replace('_', ' ')"></span>
+                <template x-if="campaign.launch_date">
+                  <span> &middot; <span x-text="formatDate(campaign.launch_date)"></span></span>
+                </template>
+              </div>
+              <div class="campaign-stats">
+                <div class="stat">
+                  <div class="stat-value" x-text="campaign.targeted || 0"></div>
+                  <div class="stat-label">Targeted</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value" x-text="campaign.responses || 0"></div>
+                  <div class="stat-label">Responses</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value" x-text="campaign.calls || 0"></div>
+                  <div class="stat-label">Calls</div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Next Round View -->
+      <div x-show="currentView === 'nextround'">
+        <div class="page-header">
+          <h2>Next Round</h2>
+          <p class="subtitle">Review and select clients for the next campaign round</p>
+        </div>
+
+        <div class="selection-counts">
+          <div class="count-item">
+            <span class="count-value yes" x-text="selectionCounts.yes"></span>
+            <span>Yes</span>
+          </div>
+          <div class="count-item">
+            <span class="count-value no" x-text="selectionCounts.no"></span>
+            <span>No</span>
+          </div>
+          <div class="count-item">
+            <span class="count-value later" x-text="selectionCounts.later"></span>
+            <span>Later</span>
+          </div>
+          <div class="count-item">
+            <span class="count-value pending" x-text="selectionCounts.pending"></span>
+            <span>Not reviewed</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="search-bar">
+            <input type="text" class="search-input" placeholder="Search clients..." x-model="clientSearch">
+            <select class="filter-select" x-model="countyFilter">
+              <option value="">All Counties</option>
+              <template x-for="county in counties" :key="county">
+                <option :value="county" x-text="county"></option>
+              </template>
+            </select>
+            <select class="filter-select" x-model="segmentFilter">
+              <option value="">All Segments</option>
+              <template x-for="segment in segments" :key="segment">
+                <option :value="segment" x-text="segment"></option>
+              </template>
+            </select>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Contact</th>
+                  <th>County</th>
+                  <th>Segment</th>
+                  <th>Decision</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="client in filteredClients" :key="client.id">
+                  <tr>
+                    <td>
+                      <div style="font-weight: 500;" x-text="client.company"></div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);" x-text="client.email"></div>
+                    </td>
+                    <td x-text="client.contact_name"></td>
+                    <td x-text="client.county"></td>
+                    <td x-text="client.segment"></td>
+                    <td>
+                      <div class="toggle-group">
+                        <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')">Yes</button>
+                        <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
+                        <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <template x-if="filteredClients.length === 0">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                      No clients found. Import clients to get started.
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Direct Mail Test View -->
+      <div x-show="currentView === 'mailtest'">
+        <div class="page-header">
+          <h2>Direct Mail A/B Test</h2>
+          <p class="subtitle">Comparing two list sources head to head</p>
+        </div>
+
+        <div class="ab-comparison">
+          <div class="arm-card arm-a">
+            <div class="arm-title">Arm A: Business Violation List</div>
+            <div class="arm-subtitle">Businesses with DBPR ceiling violations</div>
+            <div class="campaign-stats" style="margin-top: 1rem;">
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armA.mailed"></div>
+                <div class="stat-label">Mailed</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armA.responses"></div>
+                <div class="stat-label">Responses</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armA.responseRate + '%'"></div>
+                <div class="stat-label">Response Rate</div>
+              </div>
+            </div>
+            <div class="campaign-stats" style="margin-top: 0.5rem;">
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armA.booked"></div>
+                <div class="stat-label">Booked Jobs</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" x-text="'$' + mailTest.armA.costPerResponse"></div>
+                <div class="stat-label">Cost/Response</div>
+              </div>
+              <div class="stat">
+                <template x-if="mailTest.armA.missingTracking > 0">
+                  <div style="color: var(--danger);">
+                    <div class="stat-value" x-text="mailTest.armA.missingTracking"></div>
+                    <div class="stat-label">Missing Tracking</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="arm-card arm-b">
+            <div class="arm-title">Arm B: New Address Per Location</div>
+            <div class="arm-subtitle">Fresh addresses pulled per location</div>
+            <div class="campaign-stats" style="margin-top: 1rem;">
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armB.mailed"></div>
+                <div class="stat-label">Mailed</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armB.responses"></div>
+                <div class="stat-label">Responses</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armB.responseRate + '%'"></div>
+                <div class="stat-label">Response Rate</div>
+              </div>
+            </div>
+            <div class="campaign-stats" style="margin-top: 0.5rem;">
+              <div class="stat">
+                <div class="stat-value" x-text="mailTest.armB.booked"></div>
+                <div class="stat-label">Booked Jobs</div>
+              </div>
+              <div class="stat">
+                <div class="stat-value" x-text="'$' + mailTest.armB.costPerResponse"></div>
+                <div class="stat-label">Cost/Response</div>
+              </div>
+              <div class="stat">
+                <template x-if="mailTest.armB.missingTracking > 0">
+                  <div style="color: var(--danger);">
+                    <div class="stat-value" x-text="mailTest.armB.missingTracking"></div>
+                    <div class="stat-label">Missing Tracking</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem; text-align: center;">
+          <div x-show="!mailTest.canDeclareWinner" style="color: var(--text-muted);">
+            <strong>Too early to call.</strong> Need more responses in each arm for statistical confidence.
+          </div>
+          <div x-show="mailTest.canDeclareWinner" style="color: var(--success);">
+            <strong x-text="'Winner: ' + mailTest.winner"></strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Performance View -->
+      <div x-show="currentView === 'performance'">
+        <div class="page-header">
+          <h2>Monthly Performance</h2>
+          <p class="subtitle">GSC, GA4, and Meta metrics combined</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Summary</h3>
+            <select class="filter-select" x-model="selectedMonth">
+              <template x-for="month in availableMonths" :key="month">
+                <option :value="month" x-text="month"></option>
+              </template>
+            </select>
+          </div>
+          <div style="color: var(--text-muted);">
+            <p>Performance metrics will appear here once data is ingested from GSC, GA4, and Meta.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div class="card">
+            <h3 class="card-title">Google Search Console</h3>
+            <div class="chart-container">GSC data coming soon</div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Google Analytics 4</h3>
+            <div class="chart-container">GA4 data coming soon</div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Meta (Organic)</h3>
+            <div class="chart-container">Meta data coming soon</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

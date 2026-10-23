@@ -1,0 +1,17 @@
+{
+  "name": "ceilings-campaign-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Campaign Command Center for Ceilings R Us",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1 DB",
+    "deploy": "wrangler pages deploy public",
+    "db:migrate:local": "wrangler d1 execute ceilings-db --local --file=./migrations/0001_schema.sql",
+    "db:migrate": "wrangler d1 execute ceilings-db --file=./migrations/0001_schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.0.0"
+  }
+}
