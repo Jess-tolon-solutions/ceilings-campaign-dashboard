@@ -5,4 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "ceilings-db"
-database_id = "" # Will be filled after creating the database with: wrangler d1 create ceilings-db
+database_id = "839a4e15-bcd4-414d-b9b3-cdb5090c98c2"
