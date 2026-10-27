@@ -103,9 +103,17 @@
 
       <!-- Next Round View -->
       <div x-show="currentView === 'nextround'">
-        <div class="page-header">
-          <h2>Next Round</h2>
-          <p class="subtitle">Review and select clients for the next campaign round</p>
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2>Next Round</h2>
+            <p class="subtitle">Review and select clients for the next campaign round</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" @click="showImportModal = true">Import Clients</button>
+            <button class="btn btn-primary" @click="lockRound()" x-show="isAdmin" :disabled="selectionCounts.yes === 0">
+              Lock Round
+            </button>
+          </div>
         </div>
 
         <div class="selection-counts">
@@ -144,6 +152,16 @@
             </select>
           </div>
 
+          <!-- Bulk actions -->
+          <div class="bulk-actions" x-show="filteredClients.length > 0" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg); border-radius: 6px; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 0.875rem; color: var(--text-muted);">
+              Bulk select <span x-text="filteredClients.length"></span> filtered:
+            </span>
+            <button class="btn btn-secondary" style="padding: 0.375rem 0.75rem;" @click="bulkSetDecision('yes')">All Yes</button>
+            <button class="btn btn-secondary" style="padding: 0.375rem 0.75rem;" @click="bulkSetDecision('no')">All No</button>
+            <button class="btn btn-secondary" style="padding: 0.375rem 0.75rem;" @click="bulkSetDecision('later')">All Later</button>
+          </div>
+
           <div class="table-container">
             <table>
               <thead>
@@ -174,15 +192,101 @@
                     </td>
                   </tr>
                 </template>
-                <template x-if="filteredClients.length === 0">
+                <template x-if="filteredClients.length === 0 && clients.length === 0">
                   <tr>
                     <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                      No clients found. Import clients to get started.
+                      No clients found. Click "Import Clients" to get started.
+                    </td>
+                  </tr>
+                </template>
+                <template x-if="filteredClients.length === 0 && clients.length > 0">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                      No clients match your filters.
                     </td>
                   </tr>
                 </template>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import Clients Modal -->
+      <div class="modal-overlay" x-show="showImportModal" @click.self="showImportModal = false" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;" :style="showImportModal ? 'display: flex' : ''">
+        <div class="modal" style="background: white; border-radius: 12px; padding: 1.5rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0;">Import Clients</h3>
+            <button @click="showImportModal = false" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+          </div>
+
+          <div x-show="!importResult">
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">
+              Upload a CSV file with client data. Required column: <strong>Company</strong>.
+              Optional: Contact Name, Title, Email, Phone, Address, City, County, Segment, Locations Count.
+            </p>
+
+            <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1rem;">
+              <input type="file" id="csvFile" accept=".csv,.txt" @change="handleFileSelect($event)" style="display: none;">
+              <label for="csvFile" style="cursor: pointer; color: var(--primary);">
+                <svg style="width: 48px; height: 48px; margin-bottom: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <div>Click to select CSV file</div>
+              </label>
+              <div x-show="selectedFile" style="margin-top: 1rem; color: var(--text);" x-text="selectedFile?.name"></div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button class="btn btn-secondary" @click="showImportModal = false">Cancel</button>
+              <button class="btn btn-secondary" @click="previewImport()" :disabled="!selectedFile || importing">Preview</button>
+              <button class="btn btn-primary" @click="runImport()" :disabled="!selectedFile || importing">
+                <span x-show="!importing">Import</span>
+                <span x-show="importing">Importing...</span>
+              </button>
+            </div>
+          </div>
+
+          <div x-show="importResult">
+            <div style="padding: 1rem; border-radius: 8px; margin-bottom: 1rem;" :style="importResult?.success ? 'background: #d1e7dd' : 'background: #f8d7da'">
+              <div style="font-weight: 600;" x-text="importResult?.success ? 'Import Successful' : 'Import Issues'"></div>
+              <div style="margin-top: 0.5rem;">
+                <span x-text="'Total rows: ' + (importResult?.total || 0)"></span> &middot;
+                <span x-text="'Inserted: ' + (importResult?.inserted || 0)"></span> &middot;
+                <span x-text="'Updated: ' + (importResult?.updated || 0)"></span> &middot;
+                <span x-text="'Skipped: ' + (importResult?.skipped || 0)"></span>
+              </div>
+            </div>
+
+            <template x-if="importResult?.issues?.length > 0">
+              <div style="margin-bottom: 1rem;">
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">Issues:</div>
+                <div style="max-height: 150px; overflow-y: auto; font-size: 0.875rem;">
+                  <template x-for="issue in importResult.issues" :key="issue.row + issue.field">
+                    <div style="padding: 0.25rem 0; color: var(--danger);">
+                      Row <span x-text="issue.row"></span>: <span x-text="issue.message"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <template x-if="importResult?.duplicates?.length > 0">
+              <div style="margin-bottom: 1rem;">
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">Duplicates in file:</div>
+                <div style="max-height: 150px; overflow-y: auto; font-size: 0.875rem;">
+                  <template x-for="dup in importResult.duplicates" :key="dup.row">
+                    <div style="padding: 0.25rem 0; color: var(--warning);">
+                      Row <span x-text="dup.row"></span>: <span x-text="dup.company"></span> (<span x-text="dup.email"></span>)
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button class="btn btn-primary" @click="closeImportModal()">Done</button>
+            </div>
           </div>
         </div>
       </div>
