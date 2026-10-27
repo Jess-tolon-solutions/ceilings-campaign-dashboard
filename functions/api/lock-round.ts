@@ -3,21 +3,35 @@
 
 interface Env {
   DB: D1Database;
+  ADMIN_EMAILS: string; // Comma-separated list from env var
 }
 
 interface Data {
   userEmail: string;
 }
 
-// Allowed users who can lock rounds
-const ADMIN_EMAILS = ['jess@tolonsolutions.com', 'jessicatolon@gmail.com'];
+function isAdmin(env: Env, email: string): boolean {
+  const adminList = (env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+  return adminList.includes(email.toLowerCase());
+}
 
 export const onRequestPost: PagesFunction<Env, string, Data> = async (context) => {
   const { env, request, data } = context;
 
-  // Check if user is admin
-  if (!ADMIN_EMAILS.some(email => data.userEmail.toLowerCase() === email.toLowerCase())) {
-    return new Response(JSON.stringify({ error: 'Only Jess can lock rounds' }), {
+  // Check if user is admin (server-side enforcement)
+  if (!isAdmin(env, data.userEmail)) {
+    // Log unauthorized attempt
+    await env.DB.prepare(`
+      INSERT INTO audit_log (actor, action, entity, payload)
+      VALUES (?, ?, ?, ?)
+    `).bind(
+      data.userEmail,
+      'lock_round_denied',
+      'campaign',
+      JSON.stringify({ reason: 'Not an admin' })
+    ).run();
+
+    return new Response(JSON.stringify({ error: 'Only admins can lock rounds' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     });

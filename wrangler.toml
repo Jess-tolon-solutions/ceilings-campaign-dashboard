@@ -2,6 +2,9 @@ name = "ceilings-campaign-dashboard"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "public"
 
+[vars]
+ADMIN_EMAILS = "jess@tolonsolutions.com,jessicatolon@gmail.com"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ceilings-db"

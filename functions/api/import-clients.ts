@@ -1,12 +1,19 @@
 // POST /api/import-clients - Import clients from CSV/JSON
 // Validates, dedupes on email+company, shows preview of issues, then loads to D1
+// Admin-only endpoint - enforced server-side
 
 interface Env {
   DB: D1Database;
+  ADMIN_EMAILS: string; // Comma-separated list from env var
 }
 
 interface Data {
   userEmail: string;
+}
+
+function isAdmin(env: Env, email: string): boolean {
+  const adminList = (env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
+  return adminList.includes(email.toLowerCase());
 }
 
 interface ClientRow {
@@ -140,6 +147,25 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
   const { env, request, data } = context;
   const url = new URL(request.url);
   const previewOnly = url.searchParams.get('preview') === 'true';
+
+  // Server-side admin check - import is admin-only
+  if (!isAdmin(env, data.userEmail)) {
+    // Log unauthorized attempt
+    await env.DB.prepare(`
+      INSERT INTO audit_log (actor, action, entity, payload)
+      VALUES (?, ?, ?, ?)
+    `).bind(
+      data.userEmail,
+      'import_denied',
+      'clients',
+      JSON.stringify({ reason: 'Not an admin' })
+    ).run();
+
+    return new Response(JSON.stringify({ error: 'Only admins can import clients' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   try {
     const contentType = request.headers.get('content-type') || '';
