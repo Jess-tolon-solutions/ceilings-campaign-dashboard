@@ -150,6 +150,11 @@
                 <option :value="segment" x-text="segment"></option>
               </template>
             </select>
+            <select class="filter-select" x-model="statusFilter">
+              <option value="">All Statuses</option>
+              <option value="existing_client">Existing Clients</option>
+              <option value="prospect">Prospects</option>
+            </select>
           </div>
 
           <!-- Bulk actions -->
@@ -179,6 +184,10 @@
                     <td>
                       <div style="font-weight: 500;" x-text="client.company"></div>
                       <div style="font-size: 0.75rem; color: var(--text-muted);" x-text="client.email"></div>
+                      <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem;">
+                        <span x-show="client.client_status === 'existing_client'" class="badge" style="background: #d1e7dd; color: #0f5132; font-size: 0.65rem;">Existing Client</span>
+                        <span x-show="client.contacted_in_email_1" class="badge" style="background: #cfe2ff; color: #084298; font-size: 0.65rem;">Contacted in Email 1</span>
+                      </div>
                     </td>
                     <td x-text="client.contact_name"></td>
                     <td x-text="client.county"></td>
@@ -300,8 +309,8 @@
 
         <div class="ab-comparison">
           <div class="arm-card arm-a">
-            <div class="arm-title">Arm A: Business Violation List</div>
-            <div class="arm-subtitle">Businesses with DBPR ceiling violations</div>
+            <div class="arm-title">Arm A: Recent Inspection Findings</div>
+            <div class="arm-subtitle">Broward + Palm Beach counties</div>
             <div class="campaign-stats" style="margin-top: 1rem;">
               <div class="stat">
                 <div class="stat-value" x-text="mailTest.armA.mailed"></div>
@@ -337,8 +346,8 @@
           </div>
 
           <div class="arm-card arm-b">
-            <div class="arm-title">Arm B: New Address Per Location</div>
-            <div class="arm-subtitle">Fresh addresses pulled per location</div>
+            <div class="arm-title">Arm B: Location-Based List</div>
+            <div class="arm-subtitle">Miami-Dade county</div>
             <div class="campaign-stats" style="margin-top: 1rem;">
               <div class="stat">
                 <div class="stat-value" x-text="mailTest.armB.mailed"></div>
@@ -374,12 +383,17 @@
           </div>
         </div>
 
-        <div class="card" style="margin-top: 1.5rem; text-align: center;">
-          <div x-show="!mailTest.canDeclareWinner" style="color: var(--text-muted);">
-            <strong>Too early to call.</strong> Need more responses in each arm for statistical confidence.
+        <div class="card" style="margin-top: 1.5rem;">
+          <div style="text-align: center;">
+            <div x-show="!mailTest.canDeclareWinner" style="color: var(--text-muted);">
+              <strong>Too early to call.</strong> Need more responses in each arm for statistical confidence.
+            </div>
+            <div x-show="mailTest.canDeclareWinner" style="color: var(--success);">
+              <strong x-text="'Winner: ' + mailTest.winner"></strong>
+            </div>
           </div>
-          <div x-show="mailTest.canDeclareWinner" style="color: var(--success);">
-            <strong x-text="'Winner: ' + mailTest.winner"></strong>
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--text-muted);">
+            <strong>Note:</strong> Arms differ by both method and geography. Arm A targets businesses with recent inspection findings in Broward and Palm Beach. Arm B uses location-based targeting in Miami-Dade. This confound should be considered when interpreting results.
           </div>
         </div>
       </div>

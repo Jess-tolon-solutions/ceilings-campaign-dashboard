@@ -47,19 +47,31 @@ npm run db:migrate
 
 ### 3. Set Up Cloudflare Access
 
-1. Go to Cloudflare Zero Trust > Access > Applications
-2. Create a new application:
+**Enable One-time PIN authentication:**
+1. Go to Zero Trust → **Integrations** → **Identity providers** → **Add new**
+2. Select **One-time PIN** and save
+3. This allows users to log in with just their email (no Cloudflare account needed)
+
+**Create the Access Application:**
+1. Go to Zero Trust → **Access controls** → **Applications** → **Add an application**
+2. Select **Self-hosted**
+3. Configure:
    - **Name:** Ceilings Campaign Dashboard
-   - **Domain:** your-pages-domain.pages.dev (and custom domain if applicable)
+   - **Subdomain:** *(leave empty)*
+   - **Domain:** `ceilings-campaign-dashboard.pages.dev`
    - **Session duration:** 24 hours
-3. Create an Access Policy:
+4. Create an Access Policy:
    - **Name:** Allowed Users
    - **Action:** Allow
    - **Include:** Emails - add Jess and Jonathan's emails
-4. Create a Service Token for API ingest:
-   - Go to Access > Service Auth > Service Tokens
-   - Create token named "Dashboard Ingest"
-   - Save the Client ID and Client Secret
+5. In the **Authentication** tab:
+   - Select **One-time PIN** from the identity providers dropdown
+   - Enable **Apply instant authentication**
+
+**Create a Service Token for API ingest:**
+1. Go to Access controls → **Service credentials**
+2. Create token named "Dashboard Ingest"
+3. Save the Client ID and Client Secret
 
 ### 4. Configure Secrets
 

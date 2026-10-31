@@ -18,6 +18,7 @@ function app() {
     clientSearch: '',
     countyFilter: '',
     segmentFilter: '',
+    statusFilter: '',
 
     // Import modal state
     showImportModal: false,
@@ -64,8 +65,9 @@ function app() {
 
         const matchesCounty = !this.countyFilter || client.county === this.countyFilter;
         const matchesSegment = !this.segmentFilter || client.segment === this.segmentFilter;
+        const matchesStatus = !this.statusFilter || client.client_status === this.statusFilter;
 
-        return matchesSearch && matchesCounty && matchesSegment;
+        return matchesSearch && matchesCounty && matchesSegment && matchesStatus;
       });
     },
 
