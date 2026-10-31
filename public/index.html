@@ -184,7 +184,9 @@
                     <td>
                       <div style="font-weight: 500;" x-text="client.company"></div>
                       <div style="font-size: 0.75rem; color: var(--text-muted);" x-text="client.email"></div>
-                      <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem;">
+                      <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                        <span x-show="client.do_not_send" class="badge" style="background: #f8d7da; color: #842029; font-size: 0.65rem;">Do Not Send</span>
+                        <span x-show="client.hold" class="badge" style="background: #fff3cd; color: #664d03; font-size: 0.65rem;">On Hold</span>
                         <span x-show="client.client_status === 'existing_client'" class="badge" style="background: #d1e7dd; color: #0f5132; font-size: 0.65rem;">Existing Client</span>
                         <span x-show="client.contacted_in_email_1" class="badge" style="background: #cfe2ff; color: #084298; font-size: 0.65rem;">Contacted in Email 1</span>
                       </div>
@@ -194,7 +196,7 @@
                     <td x-text="client.segment"></td>
                     <td>
                       <div class="toggle-group">
-                        <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')">Yes</button>
+                        <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')" :disabled="client.do_not_send" :title="client.do_not_send ? 'Blocked: verify domain first' : ''">Yes</button>
                         <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
                         <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
                       </div>
@@ -347,7 +349,7 @@
 
           <div class="arm-card arm-b">
             <div class="arm-title">Arm B: Location-Based List</div>
-            <div class="arm-subtitle">Miami-Dade county</div>
+            <div class="arm-subtitle">Miami Shores neighborhood</div>
             <div class="campaign-stats" style="margin-top: 1rem;">
               <div class="stat">
                 <div class="stat-value" x-text="mailTest.armB.mailed"></div>
