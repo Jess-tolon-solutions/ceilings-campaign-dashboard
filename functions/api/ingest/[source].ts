@@ -9,13 +9,39 @@ interface Data extends Record<string, unknown> {
   userEmail: string;
 }
 
-type IngestSource = 'clients' | 'violations' | 'mail_list_b' | 'gsc' | 'ga4' | 'meta';
+type IngestSource = 'clients' | 'violations' | 'mail_list_b' | 'gsc' | 'ga4' | 'meta' | 'seo_keywords' | 'seo_pages';
+
+// Payload for gsc/ga4/meta: { month, metrics: {name: value}, summary: [bullet1, bullet2, bullet3] }
+interface MetricsPayload {
+  month: string;
+  metrics: Record<string, number>;
+  summary?: string[];
+}
+
+// Payload for seo_keywords: array of keyword rows
+interface KeywordRow {
+  month: string;
+  keyword: string;
+  target_page?: string;
+  position?: number;
+  clicks?: number;
+  impressions?: number;
+}
+
+// Payload for seo_pages: array of page rows
+interface PageRow {
+  month: string;
+  url: string;
+  clicks?: number;
+  top_query?: string;
+  index_status?: string;
+}
 
 export const onRequestPost: PagesFunction<Env, string, Data> = async (context) => {
   const { env, params, request, data } = context;
   const source = params.source as IngestSource;
 
-  const validSources: IngestSource[] = ['clients', 'violations', 'mail_list_b', 'gsc', 'ga4', 'meta'];
+  const validSources: IngestSource[] = ['clients', 'violations', 'mail_list_b', 'gsc', 'ga4', 'meta', 'seo_keywords', 'seo_pages'];
   if (!validSources.includes(source)) {
     return new Response(JSON.stringify({ error: `Invalid source: ${source}` }), {
       status: 400,
@@ -24,20 +50,19 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
   }
 
   try {
-    const rows = await request.json() as Record<string, any>[];
-
-    if (!Array.isArray(rows)) {
-      return new Response(JSON.stringify({ error: 'Payload must be an array' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
+    const body = await request.json();
     let inserted = 0;
     let updated = 0;
 
     switch (source) {
-      case 'clients':
+      case 'clients': {
+        const rows = body as Record<string, any>[];
+        if (!Array.isArray(rows)) {
+          return new Response(JSON.stringify({ error: 'Payload must be an array' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
         for (const row of rows) {
           const result = await env.DB.prepare(`
             INSERT INTO clients (company, contact_name, title, email, phone, address, city, county, segment, locations_count, source)
@@ -68,9 +93,16 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
           if (result.meta.changes > 0) inserted++;
         }
         break;
+      }
 
-      case 'violations':
-        // Arm A: DBPR ceiling violations
+      case 'violations': {
+        const rows = body as Record<string, any>[];
+        if (!Array.isArray(rows)) {
+          return new Response(JSON.stringify({ error: 'Payload must be an array' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
         for (const row of rows) {
           await env.DB.prepare(`
             INSERT INTO mail_drops (campaign_id, arm, list_source, business_name, address, county, violation_date, violation_type, tracking_code)
@@ -91,9 +123,16 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
           inserted++;
         }
         break;
+      }
 
-      case 'mail_list_b':
-        // Arm B: New address per location
+      case 'mail_list_b': {
+        const rows = body as Record<string, any>[];
+        if (!Array.isArray(rows)) {
+          return new Response(JSON.stringify({ error: 'Payload must be an array' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
         for (const row of rows) {
           await env.DB.prepare(`
             INSERT INTO mail_drops (campaign_id, arm, list_source, business_name, address, county, tracking_code)
@@ -112,26 +151,114 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
           inserted++;
         }
         break;
+      }
 
       case 'gsc':
       case 'ga4':
-      case 'meta':
-        for (const row of rows) {
+      case 'meta': {
+        // Payload: { month: "2024-10", metrics: { clicks: 123, ... }, summary: ["bullet1", "bullet2", "bullet3"] }
+        const payload = body as MetricsPayload;
+
+        if (!payload.month) {
+          return new Response(JSON.stringify({ error: 'month is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Delete existing metrics for this month+source, then insert new ones
+        await env.DB.prepare(`DELETE FROM metrics_monthly WHERE month = ? AND source = ?`)
+          .bind(payload.month, source).run();
+
+        // Insert each metric
+        if (payload.metrics) {
+          for (const [metric, value] of Object.entries(payload.metrics)) {
+            await env.DB.prepare(`
+              INSERT INTO metrics_monthly (month, source, metric, value)
+              VALUES (?, ?, ?, ?)
+            `).bind(payload.month, source, metric, value).run();
+            inserted++;
+          }
+        }
+
+        // Upsert summary bullets
+        if (payload.summary && Array.isArray(payload.summary)) {
           await env.DB.prepare(`
-            INSERT INTO metrics_monthly (month, source, metric, dimension, value)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(month, source, metric, dimension) DO UPDATE SET
-              value = excluded.value
+            INSERT INTO metrics_summary (month, source, bullets, updated_at)
+            VALUES (?, ?, ?, datetime('now'))
+            ON CONFLICT(month, source) DO UPDATE SET
+              bullets = excluded.bullets,
+              updated_at = datetime('now')
+          `).bind(payload.month, source, JSON.stringify(payload.summary)).run();
+        }
+        break;
+      }
+
+      case 'seo_keywords': {
+        const rows = body as KeywordRow[];
+        if (!Array.isArray(rows)) {
+          return new Response(JSON.stringify({ error: 'Payload must be an array' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        for (const row of rows) {
+          if (!row.month || !row.keyword) {
+            continue; // Skip invalid rows
+          }
+          await env.DB.prepare(`
+            INSERT INTO seo_keywords (month, keyword, target_page, position, clicks, impressions)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(month, keyword) DO UPDATE SET
+              target_page = excluded.target_page,
+              position = excluded.position,
+              clicks = excluded.clicks,
+              impressions = excluded.impressions
           `).bind(
             row.month,
-            source,
-            row.metric,
-            row.dimension || null,
-            row.value
+            row.keyword,
+            row.target_page || null,
+            row.position || null,
+            row.clicks || null,
+            row.impressions || null
           ).run();
           inserted++;
         }
         break;
+      }
+
+      case 'seo_pages': {
+        const rows = body as PageRow[];
+        if (!Array.isArray(rows)) {
+          return new Response(JSON.stringify({ error: 'Payload must be an array' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        for (const row of rows) {
+          if (!row.month || !row.url) {
+            continue; // Skip invalid rows
+          }
+          await env.DB.prepare(`
+            INSERT INTO seo_pages (month, url, clicks, top_query, index_status)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(month, url) DO UPDATE SET
+              clicks = excluded.clicks,
+              top_query = excluded.top_query,
+              index_status = excluded.index_status
+          `).bind(
+            row.month,
+            row.url,
+            row.clicks || null,
+            row.top_query || null,
+            row.index_status || null
+          ).run();
+          inserted++;
+        }
+        break;
+      }
     }
 
     // Log the ingest
@@ -142,13 +269,12 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
       data.userEmail,
       'ingest',
       source,
-      JSON.stringify({ rows: rows.length, inserted, updated })
+      JSON.stringify({ inserted, updated })
     ).run();
 
     return new Response(JSON.stringify({
       success: true,
       source,
-      rows: rows.length,
       inserted,
       updated
     }), {
