@@ -38,6 +38,19 @@ function app() {
     metricsMonth: null,
     seoMonth: null,
 
+    // Call sheet data
+    callSheet: {
+      weekStart: '',
+      weeklyLimit: 3,
+      assignedThisWeek: [],
+      allLeads: [],
+      pipeline: { open: 0, visited: 0, called: 0, won: 0, not_interested: 0, closed: 0, do_not_contact: 0 },
+      postcardCount: 0,
+      emailCount: 0
+    },
+    callSheetCityFilter: '',
+    callSheetStatusFilter: '',
+
     // Filters
     clientSearch: '',
     segmentFilter: '',
@@ -191,6 +204,21 @@ function app() {
       return [];
     },
 
+    // Computed: filtered call sheet leads
+    get filteredCallSheetLeads() {
+      return this.callSheet.allLeads.filter(lead => {
+        const matchesCity = !this.callSheetCityFilter ||
+          lead.city?.toLowerCase().includes(this.callSheetCityFilter.toLowerCase());
+
+        let matchesStatus = true;
+        if (this.callSheetStatusFilter) {
+          matchesStatus = lead.status === this.callSheetStatusFilter.toLowerCase().replace(' ', '_');
+        }
+
+        return matchesCity && matchesStatus;
+      });
+    },
+
     // Initialize app
     async init() {
       try {
@@ -208,7 +236,8 @@ function app() {
         this.loadClients(),
         this.loadMailTestData(),
         this.loadSeoData(),
-        this.loadMetrics()
+        this.loadMetrics(),
+        this.loadCallSheet()
       ]);
     },
 
@@ -288,6 +317,111 @@ function app() {
       const months = ['January', 'February', 'March', 'April', 'May', 'June',
                       'July', 'August', 'September', 'October', 'November', 'December'];
       return `${months[parseInt(m, 10) - 1]} ${year}`;
+    },
+
+    // Format week date for display (YYYY-MM-DD -> "Nov 4")
+    formatWeekDate(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(dateStr + 'T00:00:00');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[date.getMonth()]} ${date.getDate()}`;
+    },
+
+    // Load call sheet data
+    async loadCallSheet() {
+      try {
+        const res = await fetch('/api/call-sheet');
+        if (res.ok) {
+          const data = await res.json();
+          this.callSheet.weekStart = data.weekStart || '';
+          this.callSheet.weeklyLimit = data.weeklyLimit || 3;
+          this.callSheet.assignedThisWeek = data.assignedThisWeek || [];
+          this.callSheet.allLeads = data.allLeads || [];
+          this.callSheet.pipeline = data.pipeline || this.callSheet.pipeline;
+
+          // Count postcards and emails from touch data
+          const touch1 = this.callSheet.allLeads.filter(l => l.touches >= 1).length;
+          const touch2 = this.callSheet.allLeads.filter(l => l.touches >= 2).length;
+          this.callSheet.postcardCount = touch1;
+          this.callSheet.emailCount = touch2;
+        }
+      } catch (e) {
+        console.log('Call sheet data not available yet');
+      }
+    },
+
+    // Set call sheet lead status
+    async setCallSheetStatus(leadId, status) {
+      const lead = this.callSheet.allLeads.find(l => l.id === leadId);
+      if (!lead) return;
+
+      const previousStatus = lead.status;
+      lead.status = status;
+
+      try {
+        const res = await fetch(`/api/call-sheet/${leadId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, outcome_by: 'Jonathan' })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Update with server response
+          Object.assign(lead, data.record);
+          // Refresh to update pipeline counts
+          await this.loadCallSheet();
+        } else {
+          lead.status = previousStatus;
+          console.error('Failed to update status');
+        }
+      } catch (e) {
+        lead.status = previousStatus;
+        console.error('Failed to update status:', e);
+      }
+    },
+
+    // Toggle call sheet filter
+    toggleCallSheetFilter(type) {
+      if (type === 'city') {
+        const cities = [...new Set(this.callSheet.allLeads.map(l => l.city).filter(Boolean))];
+        const idx = cities.indexOf(this.callSheetCityFilter);
+        this.callSheetCityFilter = cities[(idx + 1) % (cities.length + 1)] || '';
+      } else if (type === 'status') {
+        const statuses = ['', 'Open', 'Visited', 'Called', 'Won', 'Not interested', 'Closed', 'Do not contact'];
+        const idx = statuses.indexOf(this.callSheetStatusFilter);
+        this.callSheetStatusFilter = statuses[(idx + 1) % statuses.length];
+      }
+    },
+
+    // Get call sheet status badge class
+    getCallSheetStatusBadge(status) {
+      const badges = {
+        open: 'badge-neutral',
+        visited: 'badge-info',
+        called: 'badge-info',
+        won: 'badge-success',
+        not_interested: 'badge-warning',
+        closed: 'badge-danger',
+        closed_gone: 'badge-danger',
+        do_not_contact: 'badge-danger'
+      };
+      return badges[status] || 'badge-neutral';
+    },
+
+    // Format call sheet status for display
+    formatCallSheetStatus(status) {
+      const labels = {
+        open: 'Open',
+        visited: 'Visited',
+        called: 'Called',
+        won: 'Won',
+        not_interested: 'Not interested',
+        closed: 'Closed',
+        closed_gone: 'Closed (gone)',
+        do_not_contact: 'Do not contact'
+      };
+      return labels[status] || status || 'Open';
     },
 
     // Set client decision

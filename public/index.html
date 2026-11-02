@@ -309,34 +309,34 @@
           <div class="summary-box" style="background: linear-gradient(120deg, #0b3a48 0%, #0e4d5c 45%, #116782 100%); border-radius: 22px; padding: 28px;">
             <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #cdeef1;">INSPECTION DATA · UPDATED WEEKLY</span>
             <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Inspection Follow-up</h1>
-            <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5; max-width: 680px;">Restaurants with recent ceiling or vent findings on their state health inspections, pulled from public records every week. Each one gets three touches: a postcard, a friendly email, then a visit from you for the best fits.</p>
+            <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5; max-width: 680px;">Restaurants with recent inspection findings on ceilings or ventilation, pulled from public records every week. Each one gets three touches: a postcard, a friendly email, then a visit from Jonathan for the best fits.</p>
           </div>
 
           <!-- Pipeline Strip -->
           <div class="pipeline-strip">
             <div class="pipeline-stage" style="background: linear-gradient(135deg, #3c4b51, #5b6b71);">
-              <span class="pipeline-stage-label">Found this month</span>
-              <span class="pipeline-stage-value">—</span>
+              <span class="pipeline-stage-label">Open leads</span>
+              <span class="pipeline-stage-value" x-text="callSheet.pipeline.open || '—'"></span>
               <span class="pipeline-stage-note">from public inspection records</span>
             </div>
             <div class="pipeline-stage" style="background: linear-gradient(135deg, #0e4d5c, #116782);">
               <span class="pipeline-stage-label">Touch 1 · Postcard</span>
-              <span class="pipeline-stage-value" x-text="mailTest.armA.mailed || '—'"></span>
-              <span class="pipeline-stage-note">mailed Nov 2026</span>
+              <span class="pipeline-stage-value" x-text="callSheet.postcardCount || '—'"></span>
+              <span class="pipeline-stage-note">also tracked in Direct Mail</span>
             </div>
             <div class="pipeline-stage" style="background: linear-gradient(135deg, #116782, #18a39a);">
               <span class="pipeline-stage-label">Touch 2 · Email</span>
-              <span class="pipeline-stage-value">—</span>
-              <span class="pipeline-stage-note">starts after mail test read</span>
+              <span class="pipeline-stage-value" x-text="callSheet.emailCount || '—'"></span>
+              <span class="pipeline-stage-note">automated or second postcard</span>
             </div>
             <div class="pipeline-stage" style="background: linear-gradient(135deg, #18a39a, #2bbf8a);">
               <span class="pipeline-stage-label">Touch 3 · Visit</span>
-              <span class="pipeline-stage-value">0 / 5</span>
-              <span class="pipeline-stage-note">your stops this week</span>
+              <span class="pipeline-stage-value" x-text="(callSheet.pipeline.visited + callSheet.pipeline.called) + ' / ' + callSheet.weeklyLimit"></span>
+              <span class="pipeline-stage-note">your <span x-text="callSheet.weeklyLimit"></span> this week</span>
             </div>
             <div class="pipeline-stage" style="background: linear-gradient(135deg, #1f7a3a, #3aa655);">
-              <span class="pipeline-stage-label">Booked</span>
-              <span class="pipeline-stage-value">—</span>
+              <span class="pipeline-stage-label">Won</span>
+              <span class="pipeline-stage-value" x-text="callSheet.pipeline.won || '—'"></span>
               <span class="pipeline-stage-note">jobs from inspection data</span>
             </div>
           </div>
@@ -345,15 +345,77 @@
           <div class="card card-elevated" style="padding: 0; overflow: hidden;">
             <div style="padding: 20px 22px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-light);">
               <div style="display: flex; flex-direction: column; gap: 4px;">
-                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Your stops this week</h2>
-                <span style="font-size: 14px; color: var(--text-muted);">The 5 best fits, already sent a postcard and an email. Tap what happened after each visit.</span>
+                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Your <span x-text="callSheet.weeklyLimit"></span> this week</h2>
+                <span style="font-size: 14px; color: var(--text-muted);">The best fits that have already received a postcard. <span style="font-weight: 600;">DRIVE</span> = drop by, <span style="font-weight: 600;">REMOTE</span> = call.</span>
               </div>
-              <span class="badge badge-info">Week of Nov 4</span>
+              <span class="badge badge-info" x-text="'Week of ' + formatWeekDate(callSheet.weekStart)"></span>
             </div>
-            <div class="empty-state">
-              <div class="empty-state-title">No stops assigned yet</div>
-              <div class="empty-state-text">Once call sheet data is ingested, your weekly stops will appear here.</div>
-            </div>
+
+            <template x-if="callSheet.assignedThisWeek.length === 0">
+              <div class="empty-state">
+                <div class="empty-state-title">No stops assigned yet</div>
+                <div class="empty-state-text">Once call sheet data is ingested and businesses receive touch 1, your weekly stops will appear here.</div>
+              </div>
+            </template>
+
+            <template x-if="callSheet.assignedThisWeek.length > 0">
+              <div style="display: flex; flex-direction: column;">
+                <template x-for="lead in callSheet.assignedThisWeek" :key="lead.id">
+                  <div class="lead-card" style="padding: 18px 22px; border-bottom: 1px solid var(--border-light); display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span style="font-weight: 700; font-size: 16px;" x-text="lead.business_name"></span>
+                        <span class="badge" :class="lead.tier === 'DRIVE' ? 'badge-success' : 'badge-info'" x-text="lead.tier"></span>
+                        <template x-if="lead.on_postcard_list">
+                          <span class="badge badge-neutral">Also on postcard list</span>
+                        </template>
+                      </div>
+                      <div style="font-size: 13px; color: var(--text-muted);">
+                        <span x-text="lead.address"></span> · <span x-text="lead.city"></span>
+                        <template x-if="lead.phone"> · <a :href="'tel:' + lead.phone" style="color: var(--teal-600);" x-text="lead.phone"></a></template>
+                      </div>
+                      <template x-if="lead.ask_for || lead.best_time">
+                        <div style="font-size: 13px; color: var(--text-muted);">
+                          <template x-if="lead.ask_for">Ask for <span style="font-weight: 600;" x-text="lead.ask_for"></span></template>
+                          <template x-if="lead.best_time"> · Best time: <span x-text="lead.best_time"></span></template>
+                        </div>
+                      </template>
+
+                      <!-- Internal panel (collapsed) -->
+                      <details style="margin-top: 8px;">
+                        <summary style="font-size: 12px; color: var(--text-muted); cursor: pointer;">Internal only, don't raise at the door</summary>
+                        <div style="margin-top: 8px; padding: 12px; background: var(--surface-muted); border-radius: 8px; font-size: 13px;">
+                          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;">
+                            <div><span style="color: var(--text-muted);">Signal score:</span> <span style="font-weight: 600;" x-text="lead.signal_score?.toFixed(1) || '—'"></span></div>
+                            <div><span style="color: var(--text-muted);">Inspection findings:</span> <span style="font-weight: 600;" x-text="lead.total_violations || 0"></span></div>
+                            <div><span style="color: var(--text-muted);">High priority:</span> <span style="font-weight: 600;" x-text="lead.high_priority_count || 0"></span></div>
+                            <template x-if="lead.enforcement_status">
+                              <div><span style="color: var(--text-muted);">Status:</span> <span style="font-weight: 600;" x-text="lead.enforcement_status"></span></div>
+                            </template>
+                            <template x-if="lead.open_case">
+                              <div><span class="badge badge-warning">Open case</span></div>
+                            </template>
+                          </div>
+                          <template x-if="lead.look_at">
+                            <div style="margin-top: 8px; color: var(--text-muted);">Look at: <span style="font-weight: 500;" x-text="lead.look_at"></span></div>
+                          </template>
+                        </div>
+                      </details>
+                    </div>
+
+                    <!-- Outcome buttons -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                      <button class="btn btn-sm" :class="lead.status === 'visited' ? 'btn-primary' : 'btn-secondary'" @click="setCallSheetStatus(lead.id, 'visited')">Visited</button>
+                      <button class="btn btn-sm" :class="lead.status === 'called' ? 'btn-primary' : 'btn-secondary'" @click="setCallSheetStatus(lead.id, 'called')">Called</button>
+                      <button class="btn btn-sm" :class="lead.status === 'won' ? 'btn-success' : 'btn-secondary'" @click="setCallSheetStatus(lead.id, 'won')">Won</button>
+                      <button class="btn btn-sm" :class="lead.status === 'not_interested' ? 'btn-warning' : 'btn-secondary'" @click="setCallSheetStatus(lead.id, 'not_interested')">Not interested</button>
+                      <button class="btn btn-sm" :class="['closed', 'closed_gone'].includes(lead.status) ? 'btn-danger' : 'btn-secondary'" @click="setCallSheetStatus(lead.id, 'closed')">Closed</button>
+                      <button class="btn btn-sm" :class="lead.status === 'do_not_contact' ? 'btn-danger' : 'btn-secondary'" @click="setCallSheetStatus(lead.id, 'do_not_contact')">Do not contact</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
           </div>
 
           <!-- All Inspection Leads -->
@@ -361,23 +423,43 @@
             <div class="section-header">
               <h2 class="section-title">All inspection leads</h2>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="filter-btn">All counties</button>
-                <button class="filter-btn">Any stage</button>
+                <button class="filter-btn" @click="toggleCallSheetFilter('city')">
+                  <span x-text="callSheetCityFilter || 'All cities'"></span>
+                </button>
+                <button class="filter-btn" @click="toggleCallSheetFilter('status')">
+                  <span x-text="callSheetStatusFilter || 'Any status'"></span>
+                </button>
               </div>
             </div>
             <div class="table-container">
               <div class="table-inner">
-                <div class="table-header" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);">
+                <div class="table-header" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 80px 80px 100px;">
                   <span>BUSINESS</span>
-                  <span>FOUND</span>
-                  <span>TOUCH 1</span>
-                  <span>TOUCH 2</span>
-                  <span>TOUCH 3</span>
+                  <span>CITY</span>
+                  <span>TOUCHES</span>
+                  <span>TIER</span>
+                  <span>STATUS</span>
                 </div>
-                <div class="empty-state">
-                  <div class="empty-state-title">No leads yet</div>
-                  <div class="empty-state-text">Inspection lead data will appear here once the call sheet is set up.</div>
-                </div>
+
+                <template x-if="filteredCallSheetLeads.length === 0">
+                  <div class="empty-state">
+                    <div class="empty-state-title">No leads yet</div>
+                    <div class="empty-state-text">Inspection lead data will appear here once the call sheet is set up.</div>
+                  </div>
+                </template>
+
+                <template x-for="lead in filteredCallSheetLeads" :key="lead.id">
+                  <div class="table-row" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 80px 80px 100px;">
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-weight: 600;" x-text="lead.business_name"></span>
+                      <span style="font-size: 12px; color: var(--text-muted);" x-text="lead.venue_type"></span>
+                    </div>
+                    <span x-text="lead.city || '—'"></span>
+                    <span x-text="lead.touches"></span>
+                    <span class="badge" :class="lead.tier === 'DRIVE' ? 'badge-success' : 'badge-info'" x-text="lead.tier || '—'"></span>
+                    <span class="badge" :class="getCallSheetStatusBadge(lead.status)" x-text="formatCallSheetStatus(lead.status)"></span>
+                  </div>
+                </template>
               </div>
             </div>
           </div>

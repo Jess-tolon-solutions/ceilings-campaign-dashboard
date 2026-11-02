@@ -42,3 +42,18 @@ POST `/api/ingest/:source` where source is one of:
 - `meta` - Meta Ads metrics
 - `seo_keywords` - SEO keyword rankings
 - `seo_pages` - SEO page performance
+- `call_sheet` - Inspection data call sheet (upserts, preserves dashboard fields)
+
+## Call Sheet Endpoints
+
+- `GET /api/call-sheet` - Dashboard data (weekly assignments, pipeline counts)
+- `GET /api/call-sheet/log` - Service token auth, returns touch/status for violations repo
+- `PATCH /api/call-sheet/:id` - Update lead status (autosaves, increments touches)
+
+### Call Sheet Rules
+- Upsert by dbpr_license + week_start
+- Never overwrite: touches, last_touch_at, status, outcome_note, outcome_by
+- "Your N this week": touches >= 1, excluding not_interested/closed/do_not_contact, ranked by signal_score
+- Weekly limit configurable via WEEKLY_ASSIGNMENTS env var (default: 3)
+- Operator: Jonathan
+- UI shows "inspection findings" (never "violations")
