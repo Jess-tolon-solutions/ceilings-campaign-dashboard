@@ -1,5 +1,5 @@
 // GET /api/call-sheet/log - Returns touch/status data for violations repo
-// Requires service token auth
+// Auth: Middleware validates Cf-Access-Jwt-Assertion
 
 interface Env {
   DB: D1Database;
@@ -13,18 +13,7 @@ interface LogRow {
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const { request, env } = context;
-
-  // Verify service token
-  const clientId = request.headers.get('CF-Access-Client-Id');
-  const clientSecret = request.headers.get('CF-Access-Client-Secret');
-
-  if (!clientId || !clientSecret) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  const { env } = context;
 
   try {
     // Get most recent record per license with touch/status info

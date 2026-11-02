@@ -26,6 +26,7 @@ interface KeywordRow {
   position?: number;
   clicks?: number;
   impressions?: number;
+  tracked?: boolean; // true = target keyword, false = untracked query
 }
 
 // Payload for seo_pages: array of page rows
@@ -105,11 +106,11 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
         }
         for (const row of rows) {
           await env.DB.prepare(`
-            INSERT INTO mail_drops (campaign_id, arm, list_source, business_name, address, county, violation_date, violation_type, tracking_code)
+            INSERT INTO mail_drops (campaign_id, arm, list_source, business_name, address, county, violation_date, violation_type, tracking_code, dbpr_license)
             VALUES (
               (SELECT id FROM campaigns WHERE channel = 'direct_mail' AND status = 'active' ORDER BY id DESC LIMIT 1),
               'A_violation_business',
-              ?, ?, ?, ?, ?, ?, ?
+              ?, ?, ?, ?, ?, ?, ?, ?
             )
           `).bind(
             row.list_source || 'DBPR',
@@ -118,7 +119,8 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
             row.county,
             row.violation_date,
             row.violation_type,
-            row.tracking_code
+            row.tracking_code,
+            row.dbpr_license || null
           ).run();
           inserted++;
         }
@@ -207,21 +209,25 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
           if (!row.month || !row.keyword) {
             continue; // Skip invalid rows
           }
+          // tracked: true (default) = target keyword, false = untracked query from GSC
+          const tracked = row.tracked !== false ? 1 : 0;
           await env.DB.prepare(`
-            INSERT INTO seo_keywords (month, keyword, target_page, position, clicks, impressions)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO seo_keywords (month, keyword, target_page, position, clicks, impressions, tracked)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(month, keyword) DO UPDATE SET
               target_page = excluded.target_page,
               position = excluded.position,
               clicks = excluded.clicks,
-              impressions = excluded.impressions
+              impressions = excluded.impressions,
+              tracked = excluded.tracked
           `).bind(
             row.month,
             row.keyword,
             row.target_page || null,
             row.position || null,
             row.clicks || null,
-            row.impressions || null
+            row.impressions || null,
+            tracked
           ).run();
           inserted++;
         }

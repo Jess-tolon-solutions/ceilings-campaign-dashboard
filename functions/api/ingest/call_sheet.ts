@@ -1,10 +1,9 @@
 // POST /api/ingest/call_sheet - Upsert call sheet data
+// Auth: Middleware validates Cf-Access-Jwt-Assertion
 // Never overwrites: touches, last_touch_at, status, outcome_note, outcome_by
 
 interface Env {
   DB: D1Database;
-  CF_ACCESS_CLIENT_ID?: string;
-  CF_ACCESS_CLIENT_SECRET?: string;
 }
 
 interface CallSheetRow {
@@ -31,32 +30,17 @@ interface CallSheetRow {
   last_inspection_date?: string;
   open_case?: number;
   look_at?: string;
-  on_postcard_list?: number;
 }
 
-interface Data extends Record<string, unknown> {
+interface PayloadData extends Record<string, unknown> {
   rows: CallSheetRow[];
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
-  // Verify service token
-  const clientId = request.headers.get('CF-Access-Client-Id');
-  const clientSecret = request.headers.get('CF-Access-Client-Secret');
-
-  if (!clientId || !clientSecret) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  // In production, validate against stored credentials
-  // For now, accept any service token headers (Access validates them)
-
   try {
-    const data: Data = await request.json();
+    const data: PayloadData = await request.json();
     const rows = data.rows || [];
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -106,7 +90,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             last_inspection_date = ?,
             open_case = ?,
             look_at = ?,
-            on_postcard_list = ?,
             updated_at = datetime('now')
           WHERE dbpr_license = ? AND week_start = ?
         `).bind(
@@ -131,20 +114,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           row.last_inspection_date ?? null,
           row.open_case ?? 0,
           row.look_at ?? null,
-          row.on_postcard_list ?? 0,
           row.dbpr_license,
           row.week_start
         ).run();
         updated++;
       } else {
-        // Insert new record
+        // Insert new record (on_postcard_list computed at read time from mail_drops)
         await env.DB.prepare(`
           INSERT INTO call_sheet (
             week_start, rank, business_name, tier, venue_type, address, city, zip,
             phone, ask_for, seats, owner_mail_address, best_time, hours, dbpr_license,
             signal_score, v36_count, high_priority_count, total_violations,
-            enforcement_status, last_inspection_date, open_case, look_at, on_postcard_list
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            enforcement_status, last_inspection_date, open_case, look_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           row.week_start,
           row.rank ?? null,
@@ -168,8 +150,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           row.enforcement_status ?? null,
           row.last_inspection_date ?? null,
           row.open_case ?? 0,
-          row.look_at ?? null,
-          row.on_postcard_list ?? 0
+          row.look_at ?? null
         ).run();
         inserted++;
       }

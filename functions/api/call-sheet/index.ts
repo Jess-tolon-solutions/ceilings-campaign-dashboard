@@ -36,7 +36,7 @@ interface CallSheetRow {
   status: string;
   outcome_note: string | null;
   outcome_by: string | null;
-  on_postcard_list: number;
+  on_postcard_list: number; // Computed from mail_drops
 }
 
 // Get Monday of current week
@@ -56,12 +56,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const weekStart = url.searchParams.get('week') || getCurrentWeekStart();
     const weeklyLimit = parseInt(env.WEEKLY_ASSIGNMENTS || '3', 10);
 
-    // Get all records for this week
+    // Get all records for this week, with on_postcard_list computed from mail_drops
     const allResult = await env.DB.prepare(`
-      SELECT *
-      FROM call_sheet
-      WHERE week_start = ?
-      ORDER BY signal_score DESC, rank ASC
+      SELECT cs.*,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM mail_drops md WHERE md.dbpr_license = cs.dbpr_license
+        ) THEN 1 ELSE 0 END as on_postcard_list
+      FROM call_sheet cs
+      WHERE cs.week_start = ?
+      ORDER BY cs.signal_score DESC, cs.rank ASC
     `).bind(weekStart).all<CallSheetRow>();
 
     const allLeads = allResult.results || [];

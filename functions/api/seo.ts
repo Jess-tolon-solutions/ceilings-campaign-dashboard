@@ -12,6 +12,7 @@ interface Keyword {
   position: number | null;
   clicks: number | null;
   impressions: number | null;
+  tracked: number;
 }
 
 interface Page {
@@ -46,12 +47,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    // Fetch keywords for month (all keywords are tracked for now)
+    // Fetch keywords for month with tracked status
     const keywordsResult = await env.DB.prepare(`
-      SELECT id, keyword, target_page, position, clicks, impressions
+      SELECT id, keyword, target_page, position, clicks, impressions, COALESCE(tracked, 1) as tracked
       FROM seo_keywords
       WHERE month = ?
-      ORDER BY clicks DESC NULLS LAST, position ASC NULLS LAST
+      ORDER BY tracked DESC, clicks DESC NULLS LAST, position ASC NULLS LAST
     `).bind(month).all<Keyword>();
 
     // Fetch pages for month
@@ -62,16 +63,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ORDER BY clicks DESC NULLS LAST
     `).bind(month).all<Page>();
 
-    // Calculate stats (all keywords treated as tracked until column exists)
     const keywords = keywordsResult.results || [];
     const pages = pagesResult.results || [];
 
-    const onPageOne = keywords.filter(k => k.position !== null && k.position <= 10).length;
-    const climbing = keywords.filter(k => k.position !== null && k.position > 10 && k.position <= 30).length;
-    const gaps = keywords.filter(k => k.position === null || k.position > 30).length;
+    // Stats based on tracked keywords only
+    const trackedKeywords = keywords.filter(k => k.tracked === 1);
+    const onPageOne = trackedKeywords.filter(k => k.position !== null && k.position <= 10).length;
+    const climbing = trackedKeywords.filter(k => k.position !== null && k.position > 10 && k.position <= 30).length;
+    const gaps = trackedKeywords.filter(k => k.position === null || k.position > 30).length;
 
     const stats = {
-      targetKeywords: keywords.length,
+      targetKeywords: trackedKeywords.length,
       onPageOne,
       climbing,
       gaps
