@@ -1,5 +1,16 @@
 # Ceilings R Us Campaign Dashboard
 
+## Branch: redesign
+
+The `redesign` branch contains a full UI rebuild with:
+- Sidebar navigation: Overview, SEO, Inspection Data, Campaigns, Monthly Performance
+- Responsive layout (sidebar stacks on mobile)
+- Design system: Plus Jakarta Sans + Inter, teal gradients (#0e4d5c → #116782 → #18a39a), #5eff00 accent
+- Card-based layouts with layered shadows
+- Campaigns: Client Re-engagement with round history, Direct Mail as separate view
+- Monthly Performance: tabs for SEO/Website/Social with summary bullets
+- SEO view: keywords table, service pages cards, content pipeline board
+
 ## Deployment Rules
 
 **Deploy only via git push, never `wrangler pages deploy`.**

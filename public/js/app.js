@@ -1,74 +1,87 @@
-// Ceilings R Us Campaign Dashboard - Frontend App
+// Ceilings R Us Campaign Dashboard - Frontend App (Redesign)
 
 const ADMIN_EMAILS = ['jess@tolonsolutions.com', 'jessicatolon@gmail.com'];
+const CLIENT_COLORS = ['#116782', '#1f5f8a', '#7a4fb0', '#b0592a', '#2e7d4f', '#8a5a00', '#3c4b51'];
 
 function app() {
   return {
-    // Current view state
+    // View state
     currentView: 'overview',
+    reportTab: 'seo',
 
-    // User info from Cloudflare Access
+    // User info
     userEmail: '',
 
-    // Campaign data
+    // Data
     campaigns: [],
-
-    // Client selection state
     clients: [],
-    clientSearch: '',
-    countyFilter: '',
-    segmentFilter: '',
-    statusFilter: '',
-
-    // Import modal state
-    showImportModal: false,
-    selectedFile: null,
-    importing: false,
-    importResult: null,
-
-    // Mail test data
     mailTest: {
-      armA: { mailed: 0, responses: 0, responseRate: 0, booked: 0, costPerResponse: 0, missingTracking: 0 },
-      armB: { mailed: 0, responses: 0, responseRate: 0, booked: 0, costPerResponse: 0, missingTracking: 0 },
+      armA: { mailed: 0, responses: 0, responseRate: 0, booked: 0 },
+      armB: { mailed: 0, responses: 0, responseRate: 0, booked: 0 },
       canDeclareWinner: false,
       winner: ''
     },
 
-    // Performance data
-    selectedMonth: '',
-    availableMonths: [],
+    // SEO data
+    seoKeywords: [],
+    seoPages: [],
+    seoStats: {
+      targetKeywords: 0,
+      onPageOne: 0,
+      climbing: 0,
+      gaps: 0
+    },
 
-    // Computed: check if user is admin
+    // Metrics data
+    metrics: {},
+    summaries: {},
+
+    // Filters
+    clientSearch: '',
+    segmentFilter: '',
+    decisionFilter: '',
+
+    // Modal state
+    showImportModal: false,
+    selectedFile: null,
+
+    // Stats (computed from data)
+    stats: {
+      calls: null,
+      reached: null,
+      booked: null
+    },
+
+    // Computed: is admin
     get isAdmin() {
       return ADMIN_EMAILS.some(email =>
         this.userEmail.toLowerCase() === email.toLowerCase()
       );
     },
 
-    // Computed: unique counties from clients
-    get counties() {
-      return [...new Set(this.clients.map(c => c.county).filter(Boolean))].sort();
+    // Computed: breadcrumb
+    get breadcrumb() {
+      const crumbs = {
+        overview: 'Overview',
+        seo: 'SEO',
+        inspection: 'Inspection Data',
+        campaigns: 'Campaigns',
+        reengagement: 'Campaigns / Client Re-engagement',
+        directmail: 'Campaigns / Direct Mail · Nov 2026',
+        monthly: 'Monthly Performance'
+      };
+      return crumbs[this.currentView] || 'Overview';
     },
 
-    // Computed: unique segments from clients
-    get segments() {
-      return [...new Set(this.clients.map(c => c.segment).filter(Boolean))].sort();
+    // Computed: pending count for sidebar
+    get pendingCount() {
+      return this.selectionCounts.pending;
     },
 
-    // Computed: filtered clients based on search and filters
-    get filteredClients() {
-      return this.clients.filter(client => {
-        const matchesSearch = !this.clientSearch ||
-          client.company?.toLowerCase().includes(this.clientSearch.toLowerCase()) ||
-          client.contact_name?.toLowerCase().includes(this.clientSearch.toLowerCase()) ||
-          client.email?.toLowerCase().includes(this.clientSearch.toLowerCase());
-
-        const matchesCounty = !this.countyFilter || client.county === this.countyFilter;
-        const matchesSegment = !this.segmentFilter || client.segment === this.segmentFilter;
-        const matchesStatus = !this.statusFilter || client.client_status === this.statusFilter;
-
-        return matchesSearch && matchesCounty && matchesSegment && matchesStatus;
-      });
+    // Computed: mail decisions pending
+    get mailDecisionsPending() {
+      // This would come from mail_drops with needs_decision status
+      return 5; // Placeholder
     },
 
     // Computed: selection counts
@@ -83,9 +96,101 @@ function app() {
       return counts;
     },
 
+    // Computed: review progress percentage
+    get reviewProgress() {
+      const total = this.clients.length;
+      if (total === 0) return 0;
+      const reviewed = this.selectionCounts.yes + this.selectionCounts.no + this.selectionCounts.later;
+      return Math.round((reviewed / total) * 100);
+    },
+
+    // Computed: filtered clients
+    get filteredClients() {
+      return this.clients.filter(client => {
+        const matchesSearch = !this.clientSearch ||
+          client.company?.toLowerCase().includes(this.clientSearch.toLowerCase()) ||
+          client.contact_name?.toLowerCase().includes(this.clientSearch.toLowerCase());
+
+        const matchesSegment = !this.segmentFilter || client.segment === this.segmentFilter;
+
+        let matchesDecision = true;
+        if (this.decisionFilter === 'Not reviewed') {
+          matchesDecision = !client.decision;
+        } else if (this.decisionFilter) {
+          matchesDecision = client.decision === this.decisionFilter.toLowerCase();
+        }
+
+        return matchesSearch && matchesSegment && matchesDecision;
+      });
+    },
+
+    // Computed: current summary based on tab
+    get currentSummary() {
+      const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
+      return this.summaries[source] || [];
+    },
+
+    // Computed: current metrics based on tab
+    get currentMetrics() {
+      const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
+      const metricDefs = {
+        gsc: ['clicks', 'impressions', 'ctr', 'average_position', 'pages_ranking'],
+        ga4: ['florida_visitors', 'engaged_sessions', 'contact_page_visits', 'call_taps'],
+        meta: ['reach', 'engagement', 'new_followers', 'posts_published']
+      };
+      const labels = {
+        clicks: 'Clicks',
+        impressions: 'Impressions',
+        ctr: 'CTR',
+        average_position: 'Avg. Position',
+        pages_ranking: 'Pages Ranking',
+        florida_visitors: 'Florida Visitors',
+        engaged_sessions: 'Engaged Sessions',
+        contact_page_visits: 'Contact Page Visits',
+        call_taps: 'Call Taps',
+        reach: 'Reach',
+        engagement: 'Engagement',
+        new_followers: 'New Followers',
+        posts_published: 'Posts Published'
+      };
+
+      const sourceMetrics = this.metrics[source] || {};
+      return (metricDefs[source] || []).map(key => ({
+        label: labels[key] || key,
+        value: sourceMetrics[key] !== undefined ? this.formatMetricValue(key, sourceMetrics[key]) : null,
+        change: null // Would compare to previous month
+      }));
+    },
+
+    // Computed: chart title based on tab
+    get chartTitle() {
+      const titles = {
+        seo: 'Clicks from Google',
+        web: 'Florida visitors',
+        social: 'Reach'
+      };
+      return titles[this.reportTab] || '';
+    },
+
+    // Computed: chart note based on tab
+    get chartNote() {
+      const notes = {
+        seo: 'Google Search Console',
+        web: 'Google Analytics · bot traffic removed',
+        social: 'Facebook + Instagram · organic only'
+      };
+      return notes[this.reportTab] || '';
+    },
+
+    // Computed: top rows based on tab
+    get topRows() {
+      const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
+      // This would come from the 'top' array in the ingested data
+      return [];
+    },
+
     // Initialize app
     async init() {
-      // Get user email from API (which reads from Cloudflare Access headers)
       try {
         const res = await fetch('/api/me');
         if (res.ok) {
@@ -96,13 +201,16 @@ function app() {
         console.log('Could not fetch user info');
       }
 
-      // Load initial data
-      await this.loadCampaigns();
-      await this.loadClients();
-      await this.loadMailTestData();
+      await Promise.all([
+        this.loadCampaigns(),
+        this.loadClients(),
+        this.loadMailTestData(),
+        this.loadSeoData(),
+        this.loadMetrics()
+      ]);
     },
 
-    // Load campaigns from API
+    // Load campaigns
     async loadCampaigns() {
       try {
         const res = await fetch('/api/campaigns');
@@ -114,7 +222,7 @@ function app() {
       }
     },
 
-    // Load clients from API
+    // Load clients
     async loadClients() {
       try {
         const res = await fetch('/api/clients');
@@ -138,11 +246,41 @@ function app() {
       }
     },
 
-    // Set client decision (yes/no/later)
+    // Load SEO data
+    async loadSeoData() {
+      try {
+        const res = await fetch('/api/seo');
+        if (res.ok) {
+          const data = await res.json();
+          this.seoKeywords = data.keywords || [];
+          this.seoPages = data.pages || [];
+          this.seoStats = data.stats || this.seoStats;
+        }
+      } catch (e) {
+        // SEO endpoint may not exist yet
+        console.log('SEO data not available yet');
+      }
+    },
+
+    // Load metrics
+    async loadMetrics() {
+      try {
+        const res = await fetch('/api/metrics');
+        if (res.ok) {
+          const data = await res.json();
+          this.metrics = data.metrics || {};
+          this.summaries = data.summaries || {};
+        }
+      } catch (e) {
+        // Metrics endpoint may not exist yet
+        console.log('Metrics data not available yet');
+      }
+    },
+
+    // Set client decision
     async setDecision(clientId, decision) {
-      // Optimistic update
       const client = this.clients.find(c => c.id === clientId);
-      if (client) {
+      if (client && !client.do_not_send) {
         const previousDecision = client.decision;
         client.decision = decision;
 
@@ -154,7 +292,6 @@ function app() {
           });
 
           if (!res.ok) {
-            // Revert on error
             client.decision = previousDecision;
             console.error('Failed to save decision');
           }
@@ -165,92 +302,15 @@ function app() {
       }
     },
 
-    // Bulk set decision for all filtered clients
-    async bulkSetDecision(decision) {
-      const clientIds = this.filteredClients.map(c => c.id);
-      const count = clientIds.length;
-
-      if (!confirm(`Set ${count} clients to "${decision}"?`)) {
-        return;
-      }
-
-      // Update all filtered clients
-      for (const clientId of clientIds) {
-        await this.setDecision(clientId, decision);
-      }
-    },
-
-    // Handle file selection for import
-    handleFileSelect(event) {
-      const file = event.target.files[0];
-      if (file) {
-        this.selectedFile = file;
-        this.importResult = null;
-      }
-    },
-
-    // Preview import (validate without inserting)
-    async previewImport() {
-      if (!this.selectedFile) return;
-
-      this.importing = true;
-      try {
-        const text = await this.selectedFile.text();
-        const res = await fetch('/api/import-clients?preview=true', {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/csv' },
-          body: text
-        });
-        this.importResult = await res.json();
-      } catch (e) {
-        this.importResult = { success: false, error: e.message };
-      }
-      this.importing = false;
-    },
-
-    // Run actual import
-    async runImport() {
-      if (!this.selectedFile) return;
-
-      this.importing = true;
-      try {
-        const text = await this.selectedFile.text();
-        const res = await fetch('/api/import-clients', {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/csv' },
-          body: text
-        });
-        this.importResult = await res.json();
-
-        if (this.importResult.success) {
-          // Reload clients after successful import
-          await this.loadClients();
-        }
-      } catch (e) {
-        this.importResult = { success: false, error: e.message };
-      }
-      this.importing = false;
-    },
-
-    // Close import modal and reset state
-    closeImportModal() {
-      this.showImportModal = false;
-      this.selectedFile = null;
-      this.importResult = null;
-      // Reset file input
-      const fileInput = document.getElementById('csvFile');
-      if (fileInput) fileInput.value = '';
-    },
-
-    // Lock round (admin only)
+    // Lock round
     async lockRound() {
       if (!this.isAdmin) {
-        alert('Only Jess can lock rounds.');
+        alert('Only admins can lock rounds.');
         return;
       }
 
       const yesCount = this.selectionCounts.yes;
-      if (!confirm(`Lock round with ${yesCount} selected clients? This will export a CSV and pause the campaign.`)) {
+      if (!confirm(`Lock round with ${yesCount} selected clients?`)) {
         return;
       }
 
@@ -264,7 +324,6 @@ function app() {
         const result = await res.json();
 
         if (result.success) {
-          // Download the CSV
           const blob = new Blob([result.csv], { type: 'text/csv' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -274,8 +333,6 @@ function app() {
           URL.revokeObjectURL(url);
 
           alert(`Round locked! ${result.selected_count} clients exported.`);
-
-          // Reload campaigns to reflect status change
           await this.loadCampaigns();
         } else {
           alert('Failed to lock round: ' + (result.error || 'Unknown error'));
@@ -285,11 +342,110 @@ function app() {
       }
     },
 
-    // Format date for display
-    formatDate(dateStr) {
-      if (!dateStr) return '';
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    // Handle file select
+    handleFileSelect(event) {
+      this.selectedFile = event.target.files[0];
+    },
+
+    // Run import
+    async runImport() {
+      if (!this.selectedFile) return;
+
+      try {
+        const text = await this.selectedFile.text();
+        const res = await fetch('/api/import-clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/csv' },
+          body: text
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          await this.loadClients();
+          this.showImportModal = false;
+          this.selectedFile = null;
+        } else {
+          alert('Import failed: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Import failed: ' + e.message);
+      }
+    },
+
+    // Toggle segment filter
+    toggleSegmentFilter() {
+      const segments = [...new Set(this.clients.map(c => c.segment).filter(Boolean))];
+      const idx = segments.indexOf(this.segmentFilter);
+      this.segmentFilter = segments[(idx + 1) % (segments.length + 1)] || '';
+    },
+
+    // Toggle decision filter
+    toggleStatusFilter() {
+      const options = ['', 'Not reviewed', 'Yes', 'No', 'Later'];
+      const idx = options.indexOf(this.decisionFilter);
+      this.decisionFilter = options[(idx + 1) % options.length];
+    },
+
+    // Get client color
+    getClientColor(client) {
+      const idx = this.clients.indexOf(client);
+      return CLIENT_COLORS[idx % CLIENT_COLORS.length];
+    },
+
+    // Get client initials
+    getClientInitials(client) {
+      if (client.segment) {
+        return client.segment.slice(0, 2).toUpperCase();
+      }
+      return client.company?.slice(0, 2).toUpperCase() || '??';
+    },
+
+    // Get position badge class
+    getPositionBadgeClass(kw) {
+      if (!kw.position) return 'badge-warning';
+      // This would compare to previous month
+      return 'badge-neutral';
+    },
+
+    // Get position badge text
+    getPositionBadgeText(kw) {
+      if (!kw.position) return 'Not ranking';
+      return `${kw.clicks || 0} clicks`;
+    },
+
+    // Get index status class
+    getIndexStatusClass(status) {
+      const classes = {
+        'indexed': 'badge-success',
+        'not_indexed': 'badge-danger',
+        'discovered_not_indexed': 'badge-warning',
+        'crawled_not_indexed': 'badge-warning',
+        'unknown': 'badge-neutral'
+      };
+      return classes[status] || 'badge-neutral';
+    },
+
+    // Get index status text
+    getIndexStatusText(status) {
+      const texts = {
+        'indexed': 'Indexed',
+        'not_indexed': 'Not indexed',
+        'discovered_not_indexed': 'Discovered',
+        'crawled_not_indexed': 'Crawled',
+        'unknown': 'Unknown'
+      };
+      return texts[status] || status || 'Unknown';
+    },
+
+    // Format metric value
+    formatMetricValue(key, value) {
+      if (value === null || value === undefined) return '—';
+      if (key === 'ctr') return (value * 100).toFixed(1) + '%';
+      if (key === 'average_position') return value.toFixed(1);
+      if (typeof value === 'number') {
+        return value.toLocaleString();
+      }
+      return value;
     }
   };
 }

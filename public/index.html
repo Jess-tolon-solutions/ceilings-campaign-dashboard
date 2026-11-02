@@ -4,437 +4,717 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ceilings R Us - Campaign Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body>
   <div class="app" x-data="app()">
-    <!-- Sidebar Navigation -->
-    <nav class="sidebar">
+    <!-- Sidebar -->
+    <aside class="sidebar">
       <div class="sidebar-header">
-        <h1>Ceilings R Us</h1>
-        <div class="tagline">Campaign Command Center</div>
+        <div class="sidebar-logo">CR</div>
+        <div class="sidebar-brand">
+          <span class="sidebar-brand-name">Ceilings R Us</span>
+          <span class="sidebar-brand-tagline">Growth Dashboard</span>
+        </div>
       </div>
 
-      <ul class="nav">
-        <li>
-          <a href="#" class="nav-item" :class="{ active: currentView === 'overview' }" @click.prevent="currentView = 'overview'">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-            </svg>
-            Overview
-          </a>
-        </li>
-        <li>
-          <a href="#" class="nav-item" :class="{ active: currentView === 'nextround' }" @click.prevent="currentView = 'nextround'">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-            </svg>
-            Next Round
-          </a>
-        </li>
-        <li>
-          <a href="#" class="nav-item" :class="{ active: currentView === 'mailtest' }" @click.prevent="currentView = 'mailtest'">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            Direct Mail Test
-          </a>
-        </li>
-        <li>
-          <a href="#" class="nav-item" :class="{ active: currentView === 'performance' }" @click.prevent="currentView = 'performance'">
-            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
-            Monthly Performance
-          </a>
-        </li>
-      </ul>
+      <nav aria-label="Main">
+        <ul class="nav">
+          <li>
+            <button class="nav-item" :class="{ active: currentView === 'overview' }" @click="currentView = 'overview'">
+              <span class="nav-dot"></span>
+              <span>Overview</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" :class="{ active: currentView === 'seo' }" @click="currentView = 'seo'">
+              <span class="nav-dot"></span>
+              <span>SEO</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" :class="{ active: currentView === 'inspection' }" @click="currentView = 'inspection'">
+              <span class="nav-dot"></span>
+              <span>Inspection Data</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" :class="{ active: ['campaigns', 'reengagement', 'directmail'].includes(currentView) }" @click="currentView = 'campaigns'">
+              <span class="nav-dot"></span>
+              <span>Campaigns</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" :class="{ active: currentView === 'monthly' }" @click="currentView = 'monthly'">
+              <span class="nav-dot"></span>
+              <span>Monthly Performance</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
 
-      <div class="user-info" x-show="userEmail">
-        <div x-text="userEmail"></div>
+      <div class="sidebar-cta" x-show="pendingCount > 0">
+        <span class="sidebar-cta-label">WAITING ON YOU</span>
+        <span class="sidebar-cta-text" x-text="pendingCount + ' contacts to review'"></span>
+        <button class="sidebar-cta-btn" @click="currentView = 'reengagement'">Start reviewing</button>
       </div>
-    </nav>
+
+      <span class="sidebar-footer">Campaign Command Center</span>
+    </aside>
 
     <!-- Main Content -->
     <main class="main">
-      <!-- Overview View -->
-      <div x-show="currentView === 'overview'">
-        <div class="page-header">
-          <h2>Campaign Overview</h2>
-          <p class="subtitle">Active campaigns and their results</p>
-        </div>
-
-        <div class="campaign-grid">
-          <template x-if="campaigns.length === 0">
-            <div class="card">
-              <p style="color: var(--text-muted);">No campaigns yet. Create your first campaign to get started.</p>
-            </div>
-          </template>
-          <template x-for="campaign in campaigns" :key="campaign.id">
-            <div class="campaign-card" :class="campaign.channel">
-              <div class="campaign-name" x-text="campaign.name"></div>
-              <div class="campaign-meta">
-                <span class="badge" :class="'badge-' + campaign.status" x-text="campaign.status"></span>
-                &middot;
-                <span x-text="campaign.channel.replace('_', ' ')"></span>
-                <template x-if="campaign.launch_date">
-                  <span> &middot; <span x-text="formatDate(campaign.launch_date)"></span></span>
-                </template>
-              </div>
-              <div class="campaign-stats">
-                <div class="stat">
-                  <div class="stat-value" x-text="campaign.targeted || 0"></div>
-                  <div class="stat-label">Targeted</div>
-                </div>
-                <div class="stat">
-                  <div class="stat-value" x-text="campaign.responses || 0"></div>
-                  <div class="stat-label">Responses</div>
-                </div>
-                <div class="stat">
-                  <div class="stat-value" x-text="campaign.calls || 0"></div>
-                  <div class="stat-label">Calls</div>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <!-- Next Round View -->
-      <div x-show="currentView === 'nextround'">
-        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <h2>Next Round</h2>
-            <p class="subtitle">Review and select clients for the next campaign round</p>
+      <div class="main-inner">
+        <!-- Header -->
+        <div class="header">
+          <span class="breadcrumb" x-text="breadcrumb"></span>
+          <div class="user-info">
+            <span class="user-name" x-text="userEmail || 'Jonathan Gallego'"></span>
+            <span class="user-avatar">JG</span>
           </div>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" @click="showImportModal = true">Import Clients</button>
-            <button class="btn btn-primary" @click="lockRound()" x-show="isAdmin" :disabled="selectionCounts.yes === 0">
-              Lock Round
+        </div>
+
+        <!-- OVERVIEW VIEW -->
+        <section x-show="currentView === 'overview'" class="flex-col gap-lg">
+          <div class="page-title">
+            <h1>Good morning, Jonathan</h1>
+            <p>Here's how your campaigns are doing. Calls are the number that matters most.</p>
+          </div>
+
+          <div class="grid-auto">
+            <div class="hero-card">
+              <span class="hero-card-label">Inbound calls this month</span>
+              <span class="hero-card-value" x-text="stats.calls || '—'"></span>
+              <span class="hero-card-note">to (954) 452-0004, all campaigns</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Active campaigns</span>
+              <span class="stat-value" x-text="campaigns.filter(c => c.status === 'active').length"></span>
+              <span class="stat-note">Re-engagement and direct mail</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Businesses reached</span>
+              <span class="stat-value" x-text="stats.reached || '—'"></span>
+              <span class="stat-note">email and mail combined</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Booked jobs</span>
+              <span class="stat-value" x-text="stats.booked || '—'"></span>
+              <span class="stat-note">traced to a campaign</span>
+            </div>
+          </div>
+
+          <div class="section-header">
+            <h2 class="section-title">Your campaigns</h2>
+            <button class="btn btn-secondary" @click="currentView = 'campaigns'">View all campaigns</button>
+          </div>
+
+          <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            <!-- Re-engagement Card -->
+            <button class="campaign-card" @click="currentView = 'reengagement'">
+              <div class="campaign-card-band email"></div>
+              <div class="campaign-card-hero email">
+                <span class="campaign-card-tag">EMAIL · ROUND 3</span>
+                <span class="campaign-card-name">Client Re-engagement</span>
+                <span class="campaign-card-sub">Win back past clients. Rounds 1 and 2 sent in September.</span>
+              </div>
+              <div class="campaign-card-stats">
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Picked so far</span>
+                  <span class="campaign-card-stat-value" x-text="selectionCounts.yes + selectionCounts.no + selectionCounts.later"></span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Left to review</span>
+                  <span class="campaign-card-stat-value" x-text="selectionCounts.pending"></span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Opens, round 1</span>
+                  <span class="campaign-card-stat-value">8</span>
+                </div>
+              </div>
+              <div class="campaign-card-footer">
+                <span class="badge badge-warning" x-show="selectionCounts.pending > 0">Needs your picks</span>
+                <span class="campaign-card-link">Open campaign →</span>
+              </div>
+            </button>
+
+            <!-- Direct Mail Card -->
+            <button class="campaign-card" @click="currentView = 'directmail'">
+              <div class="campaign-card-band direct-mail"></div>
+              <div class="campaign-card-hero direct-mail">
+                <span class="campaign-card-tag">DIRECT MAIL</span>
+                <span class="campaign-card-name">Direct Mail · Nov 2026</span>
+                <span class="campaign-card-sub">Postcard test: recent inspection findings vs. new addresses.</span>
+              </div>
+              <div class="campaign-card-stats">
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Postcards</span>
+                  <span class="campaign-card-stat-value" x-text="mailTest.armA.mailed + mailTest.armB.mailed"></span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Lists</span>
+                  <span class="campaign-card-stat-value">2</span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Calls</span>
+                  <span class="campaign-card-stat-value" x-text="mailTest.armA.responses + mailTest.armB.responses || '—'"></span>
+                </div>
+              </div>
+              <div class="campaign-card-footer">
+                <span class="badge badge-warning" x-show="mailDecisionsPending > 0" x-text="mailDecisionsPending + ' decisions waiting'"></span>
+                <span class="campaign-card-link">Open campaign →</span>
+              </div>
             </button>
           </div>
-        </div>
+        </section>
 
-        <div class="selection-counts">
-          <div class="count-item">
-            <span class="count-value yes" x-text="selectionCounts.yes"></span>
-            <span>Yes</span>
-          </div>
-          <div class="count-item">
-            <span class="count-value no" x-text="selectionCounts.no"></span>
-            <span>No</span>
-          </div>
-          <div class="count-item">
-            <span class="count-value later" x-text="selectionCounts.later"></span>
-            <span>Later</span>
-          </div>
-          <div class="count-item">
-            <span class="count-value pending" x-text="selectionCounts.pending"></span>
-            <span>Not reviewed</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="search-bar">
-            <input type="text" class="search-input" placeholder="Search clients..." x-model="clientSearch">
-            <select class="filter-select" x-model="countyFilter">
-              <option value="">All Counties</option>
-              <template x-for="county in counties" :key="county">
-                <option :value="county" x-text="county"></option>
-              </template>
-            </select>
-            <select class="filter-select" x-model="segmentFilter">
-              <option value="">All Segments</option>
-              <template x-for="segment in segments" :key="segment">
-                <option :value="segment" x-text="segment"></option>
-              </template>
-            </select>
-            <select class="filter-select" x-model="statusFilter">
-              <option value="">All Statuses</option>
-              <option value="existing_client">Existing Clients</option>
-              <option value="prospect">Prospects</option>
-            </select>
+        <!-- SEO VIEW -->
+        <section x-show="currentView === 'seo'" class="flex-col gap-lg">
+          <div class="summary-box" style="background: linear-gradient(120deg, #0b3a48 0%, #116782 55%, #18a39a 100%); border-radius: 22px; padding: 28px;">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #cdeef1;">SEO · GOOGLE SEARCH</span>
+            <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">What we rank for, and what we're doing about it</h1>
+            <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5; max-width: 680px;">The searches we're going after, where ceilingsrus.net shows up on Google, and the blog posts and pages being written to move up.</p>
           </div>
 
-          <!-- Bulk actions -->
-          <div class="bulk-actions" x-show="filteredClients.length > 0" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg); border-radius: 6px; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <span style="font-size: 0.875rem; color: var(--text-muted);">
-              Bulk select <span x-text="filteredClients.length"></span> filtered:
-            </span>
-            <button class="btn btn-secondary" style="padding: 0.375rem 0.75rem;" @click="bulkSetDecision('yes')">All Yes</button>
-            <button class="btn btn-secondary" style="padding: 0.375rem 0.75rem;" @click="bulkSetDecision('no')">All No</button>
-            <button class="btn btn-secondary" style="padding: 0.375rem 0.75rem;" @click="bulkSetDecision('later')">All Later</button>
-          </div>
-
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Contact</th>
-                  <th>County</th>
-                  <th>Segment</th>
-                  <th>Decision</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="client in filteredClients" :key="client.id">
-                  <tr>
-                    <td>
-                      <div style="font-weight: 500;" x-text="client.company"></div>
-                      <div style="font-size: 0.75rem; color: var(--text-muted);" x-text="client.email"></div>
-                      <div style="display: flex; gap: 0.25rem; margin-top: 0.25rem; flex-wrap: wrap;">
-                        <span x-show="client.do_not_send" class="badge" style="background: #f8d7da; color: #842029; font-size: 0.65rem;">Do Not Send</span>
-                        <span x-show="client.hold" class="badge" style="background: #fff3cd; color: #664d03; font-size: 0.65rem;">On Hold</span>
-                        <span x-show="client.client_status === 'existing_client'" class="badge" style="background: #d1e7dd; color: #0f5132; font-size: 0.65rem;">Existing Client</span>
-                        <span x-show="client.contacted_in_email_1" class="badge" style="background: #cfe2ff; color: #084298; font-size: 0.65rem;">Contacted in Email 1</span>
-                      </div>
-                    </td>
-                    <td x-text="client.contact_name"></td>
-                    <td x-text="client.county"></td>
-                    <td x-text="client.segment"></td>
-                    <td>
-                      <div class="toggle-group">
-                        <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')" :disabled="client.do_not_send" :title="client.do_not_send ? 'Blocked: verify domain first' : ''">Yes</button>
-                        <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
-                        <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-                <template x-if="filteredClients.length === 0 && clients.length === 0">
-                  <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                      No clients found. Click "Import Clients" to get started.
-                    </td>
-                  </tr>
-                </template>
-                <template x-if="filteredClients.length === 0 && clients.length > 0">
-                  <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                      No clients match your filters.
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Import Clients Modal -->
-      <div class="modal-overlay" x-show="showImportModal" @click.self="showImportModal = false" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;" :style="showImportModal ? 'display: flex' : ''">
-        <div class="modal" style="background: white; border-radius: 12px; padding: 1.5rem; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="margin: 0;">Import Clients</h3>
-            <button @click="showImportModal = false" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
-          </div>
-
-          <div x-show="!importResult">
-            <p style="color: var(--text-muted); margin-bottom: 1rem;">
-              Upload a CSV file with client data. Required column: <strong>Company</strong>.
-              Optional: Contact Name, Title, Email, Phone, Address, City, County, Segment, Locations Count.
-            </p>
-
-            <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; margin-bottom: 1rem;">
-              <input type="file" id="csvFile" accept=".csv,.txt" @change="handleFileSelect($event)" style="display: none;">
-              <label for="csvFile" style="cursor: pointer; color: var(--primary);">
-                <svg style="width: 48px; height: 48px; margin-bottom: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                </svg>
-                <div>Click to select CSV file</div>
-              </label>
-              <div x-show="selectedFile" style="margin-top: 1rem; color: var(--text);" x-text="selectedFile?.name"></div>
+          <div class="grid-4">
+            <div class="stat-card">
+              <span class="stat-label">Target keywords</span>
+              <span class="stat-value" x-text="seoStats.targetKeywords || '—'"></span>
+              <span class="stat-note">chosen by us</span>
             </div>
+            <div class="stat-card">
+              <span class="stat-label">On page 1</span>
+              <span class="stat-value" x-text="seoStats.onPageOne || '—'"></span>
+              <span class="stat-note">top 10 on Google</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Climbing</span>
+              <span class="stat-value" x-text="seoStats.climbing || '—'"></span>
+              <span class="stat-note">vs last month</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Gaps</span>
+              <span class="stat-value" x-text="seoStats.gaps || '—'"></span>
+              <span class="stat-note">no ranking yet</span>
+            </div>
+          </div>
 
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <!-- Keywords Table -->
+          <div class="flex-col gap-md">
+            <h2 class="section-title">Keywords we're tracking</h2>
+            <div class="table-container">
+              <div class="table-inner">
+                <div class="table-header" style="grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr);">
+                  <span>SEARCH</span>
+                  <span>RANKING PAGE</span>
+                  <span>POSITION</span>
+                  <span>THIS MONTH</span>
+                </div>
+                <template x-if="seoKeywords.length === 0">
+                  <div class="empty-state">
+                    <div class="empty-state-title">No keywords yet</div>
+                    <div class="empty-state-text">Keyword data will appear here once ingested from Google Search Console.</div>
+                  </div>
+                </template>
+                <template x-for="kw in seoKeywords" :key="kw.keyword">
+                  <div class="table-row" style="grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 0.7fr) minmax(0, 1fr);">
+                    <span style="font-size: 14px; font-weight: 600;" x-text="kw.keyword"></span>
+                    <span style="font-size: 13px; color: var(--text-medium);" x-text="kw.target_page || 'No page yet'"></span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;" x-text="kw.position ? kw.position.toFixed(1) : '—'"></span>
+                    <span class="badge" :class="getPositionBadgeClass(kw)" x-text="getPositionBadgeText(kw)"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- Service Pages -->
+          <div class="flex-col gap-md">
+            <h2 class="section-title">Service pages</h2>
+            <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+              <template x-if="seoPages.length === 0">
+                <div class="stat-card empty-state">
+                  <div class="empty-state-title">No pages yet</div>
+                  <div class="empty-state-text">Page data will appear once ingested.</div>
+                </div>
+              </template>
+              <template x-for="page in seoPages" :key="page.url">
+                <div class="stat-card" style="gap: 10px;">
+                  <div style="display: flex; justify-content: space-between; gap: 8px; align-items: flex-start;">
+                    <span style="font-size: 15px; font-weight: 700;" x-text="page.url.replace(/^\//, '')"></span>
+                    <span class="badge" :class="getIndexStatusClass(page.index_status)" x-text="getIndexStatusText(page.index_status)"></span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Clicks this month</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="page.clicks || '—'"></span>
+                  </div>
+                  <span style="font-size: 13px; color: var(--text-medium);" x-text="page.top_query ? 'Top: ' + page.top_query : ''"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Content Pipeline -->
+          <div class="flex-col gap-md">
+            <div class="section-header">
+              <h2 class="section-title">Content in progress</h2>
+              <span style="font-size: 13px; color: var(--text-muted);">Synced from our content board · each post targets a keyword above</span>
+            </div>
+            <div class="pipeline-board">
+              <div class="pipeline-column">
+                <div class="pipeline-column-header">
+                  <span class="pipeline-column-dot" style="background: #5b6b71;"></span>
+                  <span class="pipeline-column-title">Planned</span>
+                </div>
+                <div class="empty-state" style="padding: 24px;">
+                  <span class="text-muted" style="font-size: 13px;">No items</span>
+                </div>
+              </div>
+              <div class="pipeline-column">
+                <div class="pipeline-column-header">
+                  <span class="pipeline-column-dot" style="background: #8a5a00;"></span>
+                  <span class="pipeline-column-title">Writing</span>
+                </div>
+                <div class="empty-state" style="padding: 24px;">
+                  <span class="text-muted" style="font-size: 13px;">No items</span>
+                </div>
+              </div>
+              <div class="pipeline-column">
+                <div class="pipeline-column-header">
+                  <span class="pipeline-column-dot" style="background: #116782;"></span>
+                  <span class="pipeline-column-title">Published</span>
+                </div>
+                <div class="empty-state" style="padding: 24px;">
+                  <span class="text-muted" style="font-size: 13px;">No items</span>
+                </div>
+              </div>
+              <div class="pipeline-column">
+                <div class="pipeline-column-header">
+                  <span class="pipeline-column-dot" style="background: #0f6b3a;"></span>
+                  <span class="pipeline-column-title">Ranking</span>
+                </div>
+                <div class="empty-state" style="padding: 24px;">
+                  <span class="text-muted" style="font-size: 13px;">No items</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- INSPECTION DATA VIEW -->
+        <section x-show="currentView === 'inspection'" class="flex-col gap-lg">
+          <div class="summary-box" style="background: linear-gradient(120deg, #0b3a48 0%, #0e4d5c 45%, #116782 100%); border-radius: 22px; padding: 28px;">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #cdeef1;">INSPECTION DATA · UPDATED WEEKLY</span>
+            <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Inspection Follow-up</h1>
+            <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5; max-width: 680px;">Restaurants with recent ceiling or vent findings on their state health inspections, pulled from public records every week. Each one gets three touches: a postcard, a friendly email, then a visit from you for the best fits.</p>
+          </div>
+
+          <!-- Pipeline Strip -->
+          <div class="pipeline-strip">
+            <div class="pipeline-stage" style="background: linear-gradient(135deg, #3c4b51, #5b6b71);">
+              <span class="pipeline-stage-label">Found this month</span>
+              <span class="pipeline-stage-value">—</span>
+              <span class="pipeline-stage-note">from public inspection records</span>
+            </div>
+            <div class="pipeline-stage" style="background: linear-gradient(135deg, #0e4d5c, #116782);">
+              <span class="pipeline-stage-label">Touch 1 · Postcard</span>
+              <span class="pipeline-stage-value" x-text="mailTest.armA.mailed || '—'"></span>
+              <span class="pipeline-stage-note">mailed Nov 2026</span>
+            </div>
+            <div class="pipeline-stage" style="background: linear-gradient(135deg, #116782, #18a39a);">
+              <span class="pipeline-stage-label">Touch 2 · Email</span>
+              <span class="pipeline-stage-value">—</span>
+              <span class="pipeline-stage-note">starts after mail test read</span>
+            </div>
+            <div class="pipeline-stage" style="background: linear-gradient(135deg, #18a39a, #2bbf8a);">
+              <span class="pipeline-stage-label">Touch 3 · Visit</span>
+              <span class="pipeline-stage-value">0 / 5</span>
+              <span class="pipeline-stage-note">your stops this week</span>
+            </div>
+            <div class="pipeline-stage" style="background: linear-gradient(135deg, #1f7a3a, #3aa655);">
+              <span class="pipeline-stage-label">Booked</span>
+              <span class="pipeline-stage-value">—</span>
+              <span class="pipeline-stage-note">jobs from inspection data</span>
+            </div>
+          </div>
+
+          <!-- Your Stops This Week -->
+          <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+            <div style="padding: 20px 22px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-light);">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Your stops this week</h2>
+                <span style="font-size: 14px; color: var(--text-muted);">The 5 best fits, already sent a postcard and an email. Tap what happened after each visit.</span>
+              </div>
+              <span class="badge badge-info">Week of Nov 4</span>
+            </div>
+            <div class="empty-state">
+              <div class="empty-state-title">No stops assigned yet</div>
+              <div class="empty-state-text">Once call sheet data is ingested, your weekly stops will appear here.</div>
+            </div>
+          </div>
+
+          <!-- All Inspection Leads -->
+          <div class="flex-col gap-md">
+            <div class="section-header">
+              <h2 class="section-title">All inspection leads</h2>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="filter-btn">All counties</button>
+                <button class="filter-btn">Any stage</button>
+              </div>
+            </div>
+            <div class="table-container">
+              <div class="table-inner">
+                <div class="table-header" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);">
+                  <span>BUSINESS</span>
+                  <span>FOUND</span>
+                  <span>TOUCH 1</span>
+                  <span>TOUCH 2</span>
+                  <span>TOUCH 3</span>
+                </div>
+                <div class="empty-state">
+                  <div class="empty-state-title">No leads yet</div>
+                  <div class="empty-state-text">Inspection lead data will appear here once the call sheet is set up.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CAMPAIGNS VIEW -->
+        <section x-show="currentView === 'campaigns'" class="flex-col gap-lg">
+          <div class="page-title">
+            <h1>Campaigns</h1>
+            <p>Open a campaign to see results or make your picks.</p>
+          </div>
+
+          <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            <!-- Re-engagement Card -->
+            <button class="campaign-card" @click="currentView = 'reengagement'">
+              <div class="campaign-card-hero email" style="border-radius: 20px 20px 0 0;">
+                <span class="campaign-card-tag">EMAIL · ROUND 3</span>
+                <span class="campaign-card-name">Client Re-engagement</span>
+                <span class="campaign-card-sub">Win back past clients. Rounds 1 and 2 sent in September.</span>
+              </div>
+              <div class="campaign-card-stats">
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Picked so far</span>
+                  <span class="campaign-card-stat-value" x-text="selectionCounts.yes + selectionCounts.no + selectionCounts.later"></span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Left to review</span>
+                  <span class="campaign-card-stat-value" x-text="selectionCounts.pending"></span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Opens, round 1</span>
+                  <span class="campaign-card-stat-value">8</span>
+                </div>
+              </div>
+              <div class="campaign-card-footer">
+                <span class="badge badge-warning" x-show="selectionCounts.pending > 0">Needs your picks</span>
+                <span class="campaign-card-link">Open campaign →</span>
+              </div>
+            </button>
+
+            <!-- Direct Mail Card -->
+            <button class="campaign-card" @click="currentView = 'directmail'">
+              <div class="campaign-card-hero direct-mail" style="border-radius: 20px 20px 0 0;">
+                <span class="campaign-card-tag">DIRECT MAIL</span>
+                <span class="campaign-card-name">Direct Mail · Nov 2026</span>
+                <span class="campaign-card-sub">Postcard test: recent inspection findings vs. new addresses.</span>
+              </div>
+              <div class="campaign-card-stats">
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Postcards</span>
+                  <span class="campaign-card-stat-value" x-text="mailTest.armA.mailed + mailTest.armB.mailed"></span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Lists</span>
+                  <span class="campaign-card-stat-value">2</span>
+                </div>
+                <div class="campaign-card-stat">
+                  <span class="campaign-card-stat-label">Calls</span>
+                  <span class="campaign-card-stat-value" x-text="mailTest.armA.responses + mailTest.armB.responses || '—'"></span>
+                </div>
+              </div>
+              <div class="campaign-card-footer">
+                <span class="badge badge-warning" x-show="mailDecisionsPending > 0" x-text="mailDecisionsPending + ' decisions waiting'"></span>
+                <span class="campaign-card-link">Open campaign →</span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <!-- CLIENT RE-ENGAGEMENT VIEW -->
+        <section x-show="currentView === 'reengagement'" class="flex-col gap-lg">
+          <div class="summary-box" style="background: linear-gradient(120deg, #0e4d5c 0%, #116782 55%, #18a39a 100%); border-radius: 22px; padding: 28px; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; max-width: 560px;">
+              <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #cdeef1;">EMAIL CAMPAIGN</span>
+              <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Client Re-engagement</h1>
+              <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5;">Pick which past clients get the Round 3 email. Tap Yes, No or Later. Every tap saves on its own.</p>
+            </div>
+            <div class="round-pills">
+              <span class="round-pill">Round 1 · Sept · sent</span>
+              <span class="round-pill">Round 2 · Sept 22 · sent</span>
+              <span class="round-pill active">Round 3 · your picks</span>
+            </div>
+          </div>
+
+          <!-- Selection Counts -->
+          <div class="grid-4">
+            <div class="stat-card">
+              <span class="stat-label">Yes</span>
+              <span class="stat-value text-teal" x-text="selectionCounts.yes"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">No</span>
+              <span class="stat-value" x-text="selectionCounts.no"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Later</span>
+              <span class="stat-value" style="color: #8a5a00;" x-text="selectionCounts.later"></span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Not reviewed</span>
+              <span class="stat-value" x-text="selectionCounts.pending"></span>
+              <div style="height: 6px; background: #e7eef0; border-radius: var(--radius-full); overflow: hidden; margin-top: 6px;">
+                <div style="height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, #116782, #5eff00);" :style="'width: ' + reviewProgress + '%'"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search & Filters -->
+          <div class="search-filters">
+            <input type="search" class="search-input" placeholder="Search company or contact" x-model="clientSearch">
+            <button class="filter-btn" @click="toggleSegmentFilter()">
+              <span x-text="segmentFilter || 'All segments'"></span>
+            </button>
+            <button class="filter-btn" @click="toggleStatusFilter()">
+              <span x-text="decisionFilter || 'Not reviewed'"></span>
+            </button>
+          </div>
+
+          <!-- Client List -->
+          <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+            <template x-for="client in filteredClients" :key="client.id">
+              <div class="client-row">
+                <div class="client-info">
+                  <span class="client-avatar" :style="'background: ' + getClientColor(client)">
+                    <span x-text="getClientInitials(client)"></span>
+                  </span>
+                  <div class="client-details">
+                    <div class="client-name-row">
+                      <span class="client-company" x-text="client.company"></span>
+                      <span class="badge badge-danger" x-show="client.do_not_send" style="font-size: 11px; padding: 4px 8px;">Do Not Send</span>
+                      <span class="badge badge-warning" x-show="client.hold" style="font-size: 11px; padding: 4px 8px;">On Hold</span>
+                      <span class="badge badge-success" x-show="client.client_status === 'existing_client'" style="font-size: 11px; padding: 4px 8px;">Existing</span>
+                    </div>
+                    <span class="client-meta" x-text="[client.contact_name, client.segment, client.county].filter(Boolean).join(' · ')"></span>
+                  </div>
+                </div>
+                <div class="toggle-group">
+                  <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')" :disabled="client.do_not_send">Yes</button>
+                  <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
+                  <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
+                </div>
+              </div>
+            </template>
+            <template x-if="filteredClients.length === 0">
+              <div class="empty-state">
+                <div class="empty-state-title">No clients match your filters</div>
+                <div class="empty-state-text">Try adjusting your search or filter criteria.</div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Admin Lock Button -->
+          <div x-show="isAdmin" style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button class="btn btn-secondary" @click="showImportModal = true">Import Clients</button>
+            <button class="btn btn-primary" @click="lockRound()" :disabled="selectionCounts.yes === 0">
+              Lock Round (exports <span x-text="selectionCounts.yes"></span> clients)
+            </button>
+          </div>
+        </section>
+
+        <!-- DIRECT MAIL VIEW -->
+        <section x-show="currentView === 'directmail'" class="flex-col gap-lg">
+          <div class="summary-box" style="background: linear-gradient(120deg, #123d5c 0%, #1f5f8a 55%, #2e8bb0 100%); border-radius: 22px; padding: 28px;">
+            <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #d4e8f5;">DIRECT MAIL</span>
+            <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Direct Mail · Nov 2026</h1>
+            <p style="margin: 0; font-size: 15px; color: #e3f0f8; line-height: 1.5; max-width: 640px;">Same postcard, same 10% first-service offer, two ways of picking who gets it. Each list has its own promo code so we know which one made the phone ring.</p>
+          </div>
+
+          <!-- Decision Alert -->
+          <div x-show="mailDecisionsPending > 0" style="background: #fff8e8; border: 1px solid #f0d394; border-radius: var(--radius-lg); padding: 16px 20px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <strong style="font-size: 15px; color: #6b4500;" x-text="mailDecisionsPending + ' businesses need your call'"></strong>
+              <span style="font-size: 14px; color: #6b4a10;">Let us know if any are past or current clients before we mail.</span>
+            </div>
+            <button class="btn" style="background: #6b4500; color: white; border: 0;">Review <span x-text="mailDecisionsPending"></span></button>
+          </div>
+
+          <!-- Arms Comparison -->
+          <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <!-- Arm A -->
+            <article class="card card-elevated" style="padding: 0; overflow: hidden;">
+              <div style="height: 6px; background: linear-gradient(90deg, #116782, #18a39a);"></div>
+              <div style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+                <div style="display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 12px; font-weight: 700; color: var(--teal-700); letter-spacing: 0.06em;">LIST A</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Recent inspection findings</span>
+                    <span style="font-size: 14px; color: var(--text-muted);">Broward + Palm Beach restaurants</span>
+                  </div>
+                  <span class="badge badge-info">MAIL10-BRO / -PB</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Postcards</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="mailTest.armA.mailed"></span>
+                  </div>
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Calls + scans</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700; color: var(--teal-700);" x-text="mailTest.armA.responses || '—'"></span>
+                  </div>
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Response rate</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="mailTest.armA.responseRate + '%'"></span>
+                  </div>
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Booked jobs</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="mailTest.armA.booked || '—'"></span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <!-- Arm B -->
+            <article class="card card-elevated" style="padding: 0; overflow: hidden;">
+              <div style="height: 6px; background: linear-gradient(90deg, #1f5f8a, #5fc6e0);"></div>
+              <div style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+                <div style="display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 12px; font-weight: 700; color: var(--teal-700); letter-spacing: 0.06em;">LIST B</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">New address per location</span>
+                    <span style="font-size: 14px; color: var(--text-muted);">Miami Shores restaurants</span>
+                  </div>
+                  <span class="badge badge-info">MAIL10-MIA</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Postcards</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="mailTest.armB.mailed"></span>
+                  </div>
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Calls + scans</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700; color: var(--teal-700);" x-text="mailTest.armB.responses || '—'"></span>
+                  </div>
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Response rate</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="mailTest.armB.responseRate + '%'"></span>
+                  </div>
+                  <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Booked jobs</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700;" x-text="mailTest.armB.booked || '—'"></span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- Winner Status -->
+          <div class="card" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <span class="badge badge-neutral" x-show="!mailTest.canDeclareWinner">Too early to call</span>
+            <span class="badge badge-success" x-show="mailTest.canDeclareWinner" x-text="'Winner: ' + mailTest.winner"></span>
+            <span style="font-size: 14px; color: var(--text-medium);">We'll name a winner once both lists have enough responses. The lists also cover different areas, so read early results as a signal, not a verdict.</span>
+          </div>
+        </section>
+
+        <!-- MONTHLY PERFORMANCE VIEW -->
+        <section x-show="currentView === 'monthly'" class="flex-col gap-lg">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px;">
+            <div class="page-title">
+              <h1>Monthly Performance</h1>
+              <p>Updated automatically at the start of each month.</p>
+            </div>
+            <button class="btn btn-secondary" x-text="selectedMonth || 'October 2026'"> ▾</button>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs">
+            <button class="tab" :class="{ active: reportTab === 'seo' }" @click="reportTab = 'seo'">SEO Reporting</button>
+            <button class="tab" :class="{ active: reportTab === 'web' }" @click="reportTab = 'web'">Website Traffic</button>
+            <button class="tab" :class="{ active: reportTab === 'social' }" @click="reportTab = 'social'">Social Reporting</button>
+          </div>
+
+          <!-- Summary Box -->
+          <div class="summary-box">
+            <span class="summary-box-label">THE SHORT VERSION</span>
+            <template x-if="currentSummary.length === 0">
+              <span class="summary-box-item">No summary available for this month yet.</span>
+            </template>
+            <template x-for="line in currentSummary" :key="line">
+              <span class="summary-box-item">→ <span x-text="line"></span></span>
+            </template>
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <template x-for="metric in currentMetrics" :key="metric.label">
+              <div class="stat-card">
+                <span class="stat-label" x-text="metric.label"></span>
+                <span class="stat-value" style="font-size: 30px;" x-text="metric.value || '—'"></span>
+                <span class="badge badge-success" x-show="metric.change" x-text="metric.change" style="align-self: flex-start;"></span>
+              </div>
+            </template>
+            <template x-if="currentMetrics.length === 0">
+              <div class="stat-card">
+                <span class="stat-label">No data</span>
+                <span class="stat-value">—</span>
+                <span class="stat-note">Metrics will appear once ingested</span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Chart Placeholder -->
+          <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+              <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;" x-text="chartTitle"></h2>
+              <span style="font-size: 13px; color: var(--text-muted);" x-text="chartNote"></span>
+            </div>
+            <div style="height: 180px; border-radius: 14px; background: linear-gradient(180deg, rgba(24,163,154,0.16) 0%, rgba(24,163,154,0.02) 100%); border: 1px dashed #b9d3d9; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px;">[6-month trend chart]</div>
+            <div style="display: flex; flex-direction: column;">
+              <template x-for="row in topRows" :key="row.label">
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-light); font-size: 14px;">
+                  <span x-text="row.label"></span>
+                  <span style="font-weight: 600;" x-text="row.value || '—'"></span>
+                </div>
+              </template>
+              <template x-if="topRows.length === 0">
+                <div style="padding: 24px; text-align: center; color: var(--text-muted);">Top items will appear once data is ingested.</div>
+              </template>
+            </div>
+          </div>
+        </section>
+
+        <!-- Import Modal (kept from original) -->
+        <div class="modal-overlay" x-show="showImportModal" @click.self="showImportModal = false" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;" :style="showImportModal ? 'display: flex' : ''">
+          <div style="background: white; border-radius: 16px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;">Import Clients</h3>
+              <button @click="showImportModal = false" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">×</button>
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 16px;">Upload a CSV file with client data.</p>
+            <input type="file" accept=".csv" @change="handleFileSelect($event)">
+            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
               <button class="btn btn-secondary" @click="showImportModal = false">Cancel</button>
-              <button class="btn btn-secondary" @click="previewImport()" :disabled="!selectedFile || importing">Preview</button>
-              <button class="btn btn-primary" @click="runImport()" :disabled="!selectedFile || importing">
-                <span x-show="!importing">Import</span>
-                <span x-show="importing">Importing...</span>
-              </button>
-            </div>
-          </div>
-
-          <div x-show="importResult">
-            <div style="padding: 1rem; border-radius: 8px; margin-bottom: 1rem;" :style="importResult?.success ? 'background: #d1e7dd' : 'background: #f8d7da'">
-              <div style="font-weight: 600;" x-text="importResult?.success ? 'Import Successful' : 'Import Issues'"></div>
-              <div style="margin-top: 0.5rem;">
-                <span x-text="'Total rows: ' + (importResult?.total || 0)"></span> &middot;
-                <span x-text="'Inserted: ' + (importResult?.inserted || 0)"></span> &middot;
-                <span x-text="'Updated: ' + (importResult?.updated || 0)"></span> &middot;
-                <span x-text="'Skipped: ' + (importResult?.skipped || 0)"></span>
-              </div>
-            </div>
-
-            <template x-if="importResult?.issues?.length > 0">
-              <div style="margin-bottom: 1rem;">
-                <div style="font-weight: 600; margin-bottom: 0.5rem;">Issues:</div>
-                <div style="max-height: 150px; overflow-y: auto; font-size: 0.875rem;">
-                  <template x-for="issue in importResult.issues" :key="issue.row + issue.field">
-                    <div style="padding: 0.25rem 0; color: var(--danger);">
-                      Row <span x-text="issue.row"></span>: <span x-text="issue.message"></span>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-
-            <template x-if="importResult?.duplicates?.length > 0">
-              <div style="margin-bottom: 1rem;">
-                <div style="font-weight: 600; margin-bottom: 0.5rem;">Duplicates in file:</div>
-                <div style="max-height: 150px; overflow-y: auto; font-size: 0.875rem;">
-                  <template x-for="dup in importResult.duplicates" :key="dup.row">
-                    <div style="padding: 0.25rem 0; color: var(--warning);">
-                      Row <span x-text="dup.row"></span>: <span x-text="dup.company"></span> (<span x-text="dup.email"></span>)
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-              <button class="btn btn-primary" @click="closeImportModal()">Done</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Direct Mail Test View -->
-      <div x-show="currentView === 'mailtest'">
-        <div class="page-header">
-          <h2>Direct Mail A/B Test</h2>
-          <p class="subtitle">Comparing two list sources head to head</p>
-        </div>
-
-        <div class="ab-comparison">
-          <div class="arm-card arm-a">
-            <div class="arm-title">Arm A: Recent Inspection Findings</div>
-            <div class="arm-subtitle">Broward + Palm Beach counties</div>
-            <div class="campaign-stats" style="margin-top: 1rem;">
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armA.mailed"></div>
-                <div class="stat-label">Mailed</div>
-              </div>
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armA.responses"></div>
-                <div class="stat-label">Responses</div>
-              </div>
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armA.responseRate + '%'"></div>
-                <div class="stat-label">Response Rate</div>
-              </div>
-            </div>
-            <div class="campaign-stats" style="margin-top: 0.5rem;">
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armA.booked"></div>
-                <div class="stat-label">Booked Jobs</div>
-              </div>
-              <div class="stat">
-                <div class="stat-value" x-text="'$' + mailTest.armA.costPerResponse"></div>
-                <div class="stat-label">Cost/Response</div>
-              </div>
-              <div class="stat">
-                <template x-if="mailTest.armA.missingTracking > 0">
-                  <div style="color: var(--danger);">
-                    <div class="stat-value" x-text="mailTest.armA.missingTracking"></div>
-                    <div class="stat-label">Missing Tracking</div>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
-
-          <div class="arm-card arm-b">
-            <div class="arm-title">Arm B: Location-Based List</div>
-            <div class="arm-subtitle">Miami Shores neighborhood</div>
-            <div class="campaign-stats" style="margin-top: 1rem;">
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armB.mailed"></div>
-                <div class="stat-label">Mailed</div>
-              </div>
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armB.responses"></div>
-                <div class="stat-label">Responses</div>
-              </div>
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armB.responseRate + '%'"></div>
-                <div class="stat-label">Response Rate</div>
-              </div>
-            </div>
-            <div class="campaign-stats" style="margin-top: 0.5rem;">
-              <div class="stat">
-                <div class="stat-value" x-text="mailTest.armB.booked"></div>
-                <div class="stat-label">Booked Jobs</div>
-              </div>
-              <div class="stat">
-                <div class="stat-value" x-text="'$' + mailTest.armB.costPerResponse"></div>
-                <div class="stat-label">Cost/Response</div>
-              </div>
-              <div class="stat">
-                <template x-if="mailTest.armB.missingTracking > 0">
-                  <div style="color: var(--danger);">
-                    <div class="stat-value" x-text="mailTest.armB.missingTracking"></div>
-                    <div class="stat-label">Missing Tracking</div>
-                  </div>
-                </template>
-              </div>
+              <button class="btn btn-primary" @click="runImport()" :disabled="!selectedFile">Import</button>
             </div>
           </div>
         </div>
 
-        <div class="card" style="margin-top: 1.5rem;">
-          <div style="text-align: center;">
-            <div x-show="!mailTest.canDeclareWinner" style="color: var(--text-muted);">
-              <strong>Too early to call.</strong> Need more responses in each arm for statistical confidence.
-            </div>
-            <div x-show="mailTest.canDeclareWinner" style="color: var(--success);">
-              <strong x-text="'Winner: ' + mailTest.winner"></strong>
-            </div>
-          </div>
-          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--text-muted);">
-            <strong>Note:</strong> Arms differ by both method and geography. Arm A targets businesses with recent inspection findings in Broward and Palm Beach. Arm B uses location-based targeting in Miami-Dade. This confound should be considered when interpreting results.
-          </div>
-        </div>
-      </div>
-
-      <!-- Monthly Performance View -->
-      <div x-show="currentView === 'performance'">
-        <div class="page-header">
-          <h2>Monthly Performance</h2>
-          <p class="subtitle">GSC, GA4, and Meta metrics combined</p>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Summary</h3>
-            <select class="filter-select" x-model="selectedMonth">
-              <template x-for="month in availableMonths" :key="month">
-                <option :value="month" x-text="month"></option>
-              </template>
-            </select>
-          </div>
-          <div style="color: var(--text-muted);">
-            <p>Performance metrics will appear here once data is ingested from GSC, GA4, and Meta.</p>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
-          <div class="card">
-            <h3 class="card-title">Google Search Console</h3>
-            <div class="chart-container">GSC data coming soon</div>
-          </div>
-          <div class="card">
-            <h3 class="card-title">Google Analytics 4</h3>
-            <div class="chart-container">GA4 data coming soon</div>
-          </div>
-          <div class="card">
-            <h3 class="card-title">Meta (Organic)</h3>
-            <div class="chart-container">Meta data coming soon</div>
-          </div>
-        </div>
       </div>
     </main>
   </div>
