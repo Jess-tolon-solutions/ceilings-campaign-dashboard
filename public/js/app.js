@@ -35,6 +35,8 @@ function app() {
     // Metrics data
     metrics: {},
     summaries: {},
+    metricsMonth: null,
+    seoMonth: null,
 
     // Filters
     clientSearch: '',
@@ -255,6 +257,7 @@ function app() {
           this.seoKeywords = data.keywords || [];
           this.seoPages = data.pages || [];
           this.seoStats = data.stats || this.seoStats;
+          this.seoMonth = data.month || null;
         }
       } catch (e) {
         // SEO endpoint may not exist yet
@@ -270,11 +273,21 @@ function app() {
           const data = await res.json();
           this.metrics = data.metrics || {};
           this.summaries = data.summaries || {};
+          this.metricsMonth = data.month || null;
         }
       } catch (e) {
         // Metrics endpoint may not exist yet
         console.log('Metrics data not available yet');
       }
+    },
+
+    // Format month for display (YYYY-MM -> "September 2026")
+    formatMonth(month) {
+      if (!month) return '';
+      const [year, m] = month.split('-');
+      const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+      return `${months[parseInt(m, 10) - 1]} ${year}`;
     },
 
     // Set client decision

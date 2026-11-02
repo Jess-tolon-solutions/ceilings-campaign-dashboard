@@ -1,4 +1,5 @@
 // GET /api/seo - Returns SEO keywords and pages data
+// Query param: ?month=YYYY-MM (defaults to most recent month with data)
 
 interface Env {
   DB: D1Database;
@@ -11,7 +12,6 @@ interface Keyword {
   position: number | null;
   clicks: number | null;
   impressions: number | null;
-  tracked: number;
 }
 
 interface Page {
@@ -22,41 +22,56 @@ interface Page {
   index_status: string | null;
 }
 
+interface MonthRow {
+  month: string;
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const { env } = context;
+  const { env, request } = context;
+  const url = new URL(request.url);
 
   try {
-    // Get current month in YYYY-MM format
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // Get month from query param or find most recent
+    let month = url.searchParams.get('month');
+    if (!month) {
+      const recentResult = await env.DB.prepare(`
+        SELECT month FROM seo_keywords ORDER BY month DESC LIMIT 1
+      `).first<MonthRow>();
+      month = recentResult?.month || '';
+    }
 
-    // Fetch keywords for current month
+    if (!month) {
+      return new Response(JSON.stringify({ keywords: [], pages: [], stats: { targetKeywords: 0, onPageOne: 0, climbing: 0, gaps: 0 }, month: null }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Fetch keywords for month (all keywords are tracked for now)
     const keywordsResult = await env.DB.prepare(`
-      SELECT id, keyword, target_page, position, clicks, impressions, tracked
+      SELECT id, keyword, target_page, position, clicks, impressions
       FROM seo_keywords
       WHERE month = ?
-      ORDER BY clicks DESC NULLS LAST
-    `).bind(currentMonth).all<Keyword>();
+      ORDER BY clicks DESC NULLS LAST, position ASC NULLS LAST
+    `).bind(month).all<Keyword>();
 
-    // Fetch pages for current month
+    // Fetch pages for month
     const pagesResult = await env.DB.prepare(`
       SELECT id, url, clicks, top_query, index_status
       FROM seo_pages
       WHERE month = ?
       ORDER BY clicks DESC NULLS LAST
-    `).bind(currentMonth).all<Page>();
+    `).bind(month).all<Page>();
 
-    // Calculate stats
+    // Calculate stats (all keywords treated as tracked until column exists)
     const keywords = keywordsResult.results || [];
     const pages = pagesResult.results || [];
 
-    const trackedKeywords = keywords.filter(k => k.tracked === 1);
-    const onPageOne = trackedKeywords.filter(k => k.position !== null && k.position <= 10).length;
-    const climbing = trackedKeywords.filter(k => k.position !== null && k.position > 10 && k.position <= 30).length;
-    const gaps = trackedKeywords.filter(k => k.position === null || k.position > 30).length;
+    const onPageOne = keywords.filter(k => k.position !== null && k.position <= 10).length;
+    const climbing = keywords.filter(k => k.position !== null && k.position > 10 && k.position <= 30).length;
+    const gaps = keywords.filter(k => k.position === null || k.position > 30).length;
 
     const stats = {
-      targetKeywords: trackedKeywords.length,
+      targetKeywords: keywords.length,
       onPageOne,
       climbing,
       gaps
@@ -65,13 +80,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new Response(JSON.stringify({
       keywords,
       pages,
-      stats
+      stats,
+      month
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error('Error fetching SEO data:', error);
-    return new Response(JSON.stringify({ keywords: [], pages: [], stats: { targetKeywords: 0, onPageOne: 0, climbing: 0, gaps: 0 } }), {
+    return new Response(JSON.stringify({ keywords: [], pages: [], stats: { targetKeywords: 0, onPageOne: 0, climbing: 0, gaps: 0 }, month: null }), {
       headers: { 'Content-Type': 'application/json' }
     });
   }
