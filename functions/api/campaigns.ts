@@ -4,7 +4,7 @@ interface Env {
   DB: D1Database;
 }
 
-interface Data {
+interface Data extends Record<string, unknown> {
   userEmail: string;
 }
 

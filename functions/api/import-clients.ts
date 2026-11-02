@@ -7,7 +7,7 @@ interface Env {
   ADMIN_EMAILS: string; // Comma-separated list from env var
 }
 
-interface Data {
+interface Data extends Record<string, unknown> {
   userEmail: string;
 }
 
@@ -172,7 +172,7 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
     let rows: ClientRow[];
 
     if (contentType.includes('application/json')) {
-      const body = await request.json();
+      const body = await request.json() as ClientRow[] | { rows: ClientRow[] };
       rows = Array.isArray(body) ? body : body.rows || [];
     } else if (contentType.includes('text/csv') || contentType.includes('text/plain')) {
       const csvText = await request.text();

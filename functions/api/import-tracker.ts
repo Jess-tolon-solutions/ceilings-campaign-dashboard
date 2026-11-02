@@ -7,7 +7,7 @@ interface Env {
   ADMIN_EMAILS: string;
 }
 
-interface Data {
+interface Data extends Record<string, unknown> {
   userEmail: string;
 }
 

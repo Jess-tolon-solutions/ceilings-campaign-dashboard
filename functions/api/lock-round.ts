@@ -6,7 +6,7 @@ interface Env {
   ADMIN_EMAILS: string; // Comma-separated list from env var
 }
 
-interface Data {
+interface Data extends Record<string, unknown> {
   userEmail: string;
 }
 
