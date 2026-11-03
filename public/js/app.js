@@ -28,15 +28,37 @@ function app() {
     seoStats: {
       targetKeywords: 0,
       onPageOne: 0,
-      climbing: 0,
+      closeToPageOne: 0,
+      movedUp: 0,
       gaps: 0
     },
+    seoOpportunities: [],
+    seoMovedUpList: [],
 
     // Metrics data
     metrics: {},
+    previousMetrics: {},
     summaries: {},
     metricsMonth: null,
+    previousMonth: null,
     seoMonth: null,
+
+    // Working on items
+    workingOnItems: [],
+    newWorkingOnTitle: '',
+    editingWorkingOnId: null,
+
+    // Meta form (admin only)
+    metaForm: {
+      reach: '',
+      engagement: '',
+      new_followers: '',
+      posts_published: '',
+      summary1: '',
+      summary2: '',
+      summary3: ''
+    },
+    savingMeta: false,
 
     // Call sheet data
     callSheet: {
@@ -105,7 +127,6 @@ function app() {
 
     // Computed: mail decisions pending
     get mailDecisionsPending() {
-      // This would come from mail_drops with needs_decision status
       return 5; // Placeholder
     },
 
@@ -155,24 +176,27 @@ function app() {
       return this.summaries[source] || [];
     },
 
-    // Computed: current metrics based on tab
+    // Computed: current metrics based on tab with month-over-month
     get currentMetrics() {
       const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
       const metricDefs = {
         gsc: ['clicks', 'impressions', 'ctr', 'average_position', 'pages_ranking'],
-        ga4: ['florida_visitors', 'engaged_sessions', 'contact_page_visits', 'call_taps'],
+        ga4: ['service_area_visitors', 'florida_visitors', 'all_visits', 'engaged_sessions', 'contact_forms_started', 'contact_page_visits', 'call_taps'],
         meta: ['reach', 'engagement', 'new_followers', 'posts_published']
       };
       const labels = {
-        clicks: 'Clicks',
+        clicks: 'Clicks from Google',
         impressions: 'Impressions',
-        ctr: 'CTR',
+        ctr: 'Click-through Rate',
         average_position: 'Avg. Position',
         pages_ranking: 'Pages Ranking',
-        florida_visitors: 'Florida Visitors',
-        engaged_sessions: 'Engaged Sessions',
+        service_area_visitors: 'Service-area Visitors',
+        florida_visitors: 'Florida Visitors (bots removed)',
+        all_visits: 'All Website Visits',
+        engaged_sessions: 'Engaged Sessions (Florida)',
+        contact_forms_started: 'Contact Forms Started',
         contact_page_visits: 'Contact Page Visits',
-        call_taps: 'Call Taps',
+        call_taps: 'Phone Taps',
         reach: 'Reach',
         engagement: 'Engagement',
         new_followers: 'New Followers',
@@ -180,18 +204,45 @@ function app() {
       };
 
       const sourceMetrics = this.metrics[source] || {};
-      return (metricDefs[source] || []).map(key => ({
-        label: labels[key] || key,
-        value: sourceMetrics[key] !== undefined ? this.formatMetricValue(key, sourceMetrics[key]) : null,
-        change: null // Would compare to previous month
-      }));
+      const prevSourceMetrics = this.previousMetrics[source] || {};
+
+      return (metricDefs[source] || []).map(key => {
+        const current = sourceMetrics[key];
+        const previous = prevSourceMetrics[key];
+        let change = null;
+
+        if (current !== undefined && previous !== undefined && previous !== 0) {
+          const diff = current - previous;
+          const direction = diff > 0 ? '↑' : diff < 0 ? '↓' : '';
+          change = {
+            direction,
+            previous,
+            diff: Math.abs(diff),
+            improved: key === 'average_position' ? diff < 0 : diff > 0 // Lower position is better for avg_position
+          };
+        }
+
+        return {
+          key,
+          label: labels[key] || key,
+          value: current !== undefined ? this.formatMetricValue(key, current) : null,
+          rawValue: current,
+          change,
+          isHeadline: key === 'service_area_visitors'
+        };
+      });
+    },
+
+    // Computed: headline metric for Website Traffic
+    get headlineMetric() {
+      return this.currentMetrics.find(m => m.isHeadline) || this.currentMetrics[0];
     },
 
     // Computed: chart title based on tab
     get chartTitle() {
       const titles = {
         seo: 'Clicks from Google',
-        web: 'Florida visitors',
+        web: 'Service-area visitors',
         social: 'Reach'
       };
       return titles[this.reportTab] || '';
@@ -210,7 +261,6 @@ function app() {
     // Computed: top rows based on tab
     get topRows() {
       const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
-      // This would come from the 'top' array in the ingested data
       return [];
     },
 
@@ -249,7 +299,8 @@ function app() {
         this.loadMetrics(),
         this.loadCallSheet(),
         this.loadEmailResults(),
-        this.loadRound2Counts()
+        this.loadRound2Counts(),
+        this.loadWorkingOn()
       ]);
     },
 
@@ -266,8 +317,6 @@ function app() {
     },
 
     // Load clients
-    // campaignId: filter by campaign (default: active campaign)
-    // excludeApprovedIn: comma-separated campaign IDs to exclude already-approved clients
     async loadClients(campaignId = null, excludeApprovedIn = null) {
       try {
         let url = '/api/clients';
@@ -306,10 +355,11 @@ function app() {
           this.seoKeywords = data.keywords || [];
           this.seoPages = data.pages || [];
           this.seoStats = data.stats || this.seoStats;
+          this.seoOpportunities = data.opportunities || [];
+          this.seoMovedUpList = data.movedUpList || [];
           this.seoMonth = data.month || null;
         }
       } catch (e) {
-        // SEO endpoint may not exist yet
         console.log('SEO data not available yet');
       }
     },
@@ -321,11 +371,135 @@ function app() {
         if (res.ok) {
           const data = await res.json();
           this.metrics = data.metrics || {};
+          this.previousMetrics = data.previousMetrics || {};
           this.summaries = data.summaries || {};
           this.metricsMonth = data.month || null;
+          this.previousMonth = data.previousMonth || null;
+
+          // Pre-fill meta form if data exists
+          if (this.metrics.meta) {
+            this.metaForm.reach = this.metrics.meta.reach || '';
+            this.metaForm.engagement = this.metrics.meta.engagement || '';
+            this.metaForm.new_followers = this.metrics.meta.new_followers || '';
+            this.metaForm.posts_published = this.metrics.meta.posts_published || '';
+          }
+          if (this.summaries.meta && this.summaries.meta.length >= 3) {
+            this.metaForm.summary1 = this.summaries.meta[0] || '';
+            this.metaForm.summary2 = this.summaries.meta[1] || '';
+            this.metaForm.summary3 = this.summaries.meta[2] || '';
+          }
         }
       } catch (e) {
         // Metrics endpoint may not be available
+      }
+    },
+
+    // Load working on items
+    async loadWorkingOn() {
+      try {
+        const res = await fetch('/api/working-on');
+        if (res.ok) {
+          const data = await res.json();
+          this.workingOnItems = data.items || [];
+        }
+      } catch (e) {
+        // Working on endpoint may not exist yet
+      }
+    },
+
+    // Add working on item (admin only)
+    async addWorkingOnItem() {
+      if (!this.isAdmin || !this.newWorkingOnTitle.trim()) return;
+
+      try {
+        const res = await fetch('/api/working-on', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: this.newWorkingOnTitle.trim() })
+        });
+
+        if (res.ok) {
+          this.newWorkingOnTitle = '';
+          await this.loadWorkingOn();
+        }
+      } catch (e) {
+        console.error('Failed to add item:', e);
+      }
+    },
+
+    // Update working on item status (admin only)
+    async updateWorkingOnStatus(id, status) {
+      if (!this.isAdmin) return;
+
+      try {
+        const res = await fetch(`/api/working-on/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+
+        if (res.ok) {
+          await this.loadWorkingOn();
+        }
+      } catch (e) {
+        console.error('Failed to update item:', e);
+      }
+    },
+
+    // Delete working on item (admin only)
+    async deleteWorkingOnItem(id) {
+      if (!this.isAdmin) return;
+
+      try {
+        const res = await fetch(`/api/working-on/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          await this.loadWorkingOn();
+        }
+      } catch (e) {
+        console.error('Failed to delete item:', e);
+      }
+    },
+
+    // Save meta metrics (admin only)
+    async saveMetaMetrics() {
+      if (!this.isAdmin || !this.metricsMonth) return;
+
+      this.savingMeta = true;
+      try {
+        const metrics = {
+          reach: parseInt(this.metaForm.reach) || 0,
+          engagement: parseInt(this.metaForm.engagement) || 0,
+          new_followers: parseInt(this.metaForm.new_followers) || 0,
+          posts_published: parseInt(this.metaForm.posts_published) || 0
+        };
+
+        const summary = [
+          this.metaForm.summary1,
+          this.metaForm.summary2,
+          this.metaForm.summary3
+        ].filter(s => s.trim());
+
+        const res = await fetch('/api/metrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            month: this.metricsMonth,
+            source: 'meta',
+            metrics,
+            summary
+          })
+        });
+
+        if (res.ok) {
+          await this.loadMetrics();
+          alert('Social metrics saved!');
+        } else {
+          alert('Failed to save metrics');
+        }
+      } catch (e) {
+        alert('Error saving metrics: ' + e.message);
+      } finally {
+        this.savingMeta = false;
       }
     },
 
@@ -358,7 +532,6 @@ function app() {
           this.callSheet.allLeads = data.allLeads || [];
           this.callSheet.pipeline = data.pipeline || this.callSheet.pipeline;
 
-          // Count postcards and emails from touch data
           const touch1 = this.callSheet.allLeads.filter(l => l.touches >= 1).length;
           const touch2 = this.callSheet.allLeads.filter(l => l.touches >= 2).length;
           this.callSheet.postcardCount = touch1;
@@ -375,7 +548,6 @@ function app() {
         const res = await fetch('/api/email-results');
         if (res.ok) {
           const data = await res.json();
-          // Index by campaign_id
           this.emailResults = {};
           for (const result of data.results || []) {
             this.emailResults[result.campaign_id] = result;
@@ -389,7 +561,6 @@ function app() {
     // Load Round 2 counts
     async loadRound2Counts() {
       try {
-        // Campaign ID 2 is Round 2
         const res = await fetch('/api/clients?campaign_id=2');
         if (res.ok) {
           const clients = await res.json();
@@ -406,7 +577,6 @@ function app() {
     async selectRound(round) {
       this.selectedRound = round;
       if (round === 3) {
-        // Round 3 excludes clients approved in Round 2
         await this.loadClients(3, '2');
       } else {
         await this.loadClients(round);
@@ -486,9 +656,7 @@ function app() {
 
         if (res.ok) {
           const data = await res.json();
-          // Update with server response
           Object.assign(lead, data.record);
-          // Refresh to update pipeline counts
           await this.loadCallSheet();
         } else {
           lead.status = previousStatus;
@@ -669,13 +837,16 @@ function app() {
     // Get position badge class
     getPositionBadgeClass(kw) {
       if (!kw.position) return 'badge-warning';
-      // This would compare to previous month
+      if (kw.positionChange < 0) return 'badge-success'; // Moved up
+      if (kw.positionChange > 0) return 'badge-danger'; // Moved down
       return 'badge-neutral';
     },
 
     // Get position badge text
     getPositionBadgeText(kw) {
       if (!kw.position) return 'Not ranking';
+      if (kw.positionChange < 0) return `↑ was ${kw.previousPosition}`;
+      if (kw.positionChange > 0) return `↓ was ${kw.previousPosition}`;
       return `${kw.clicks || 0} clicks`;
     },
 
@@ -703,15 +874,41 @@ function app() {
       return texts[status] || status || 'Unknown';
     },
 
+    // Get working on status badge
+    getWorkingOnBadge(status) {
+      const badges = {
+        'in_progress': 'badge-info',
+        'waiting': 'badge-warning',
+        'done': 'badge-success'
+      };
+      return badges[status] || 'badge-neutral';
+    },
+
+    // Get working on status label
+    getWorkingOnLabel(status) {
+      const labels = {
+        'in_progress': 'In progress',
+        'waiting': 'Waiting',
+        'done': 'Done'
+      };
+      return labels[status] || status;
+    },
+
     // Format metric value
     formatMetricValue(key, value) {
       if (value === null || value === undefined) return '—';
-      if (key === 'ctr') return (value * 100).toFixed(1) + '%';
+      if (key === 'ctr') return (value * 100).toFixed(2) + '%';
       if (key === 'average_position') return value.toFixed(1);
       if (typeof value === 'number') {
         return value.toLocaleString();
       }
       return value;
+    },
+
+    // Format change display
+    formatChange(change) {
+      if (!change) return '';
+      return `${change.direction} was ${this.formatMetricValue('', change.previous)}`;
     }
   };
 }

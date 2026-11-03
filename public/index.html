@@ -169,6 +169,40 @@
               </div>
             </button>
           </div>
+
+          <!-- What we're working on -->
+          <div class="card" style="padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h2 class="section-title" style="margin: 0;">What we're working on</h2>
+            </div>
+            <div class="flex-col gap-sm">
+              <template x-for="item in workingOnItems" :key="item.id">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-light);">
+                  <span class="badge" :class="getWorkingOnBadge(item.status)" x-text="getWorkingOnLabel(item.status)" style="min-width: 80px; text-align: center;"></span>
+                  <span style="flex: 1; font-size: 14px;" x-text="item.title"></span>
+                  <template x-if="isAdmin">
+                    <div style="display: flex; gap: 8px;">
+                      <select @change="updateWorkingOnStatus(item.id, $event.target.value)" :value="item.status" style="font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-light);">
+                        <option value="in_progress">In progress</option>
+                        <option value="waiting">Waiting</option>
+                        <option value="done">Done</option>
+                      </select>
+                      <button @click="deleteWorkingOnItem(item.id)" style="background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 16px;" title="Delete">×</button>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template x-if="workingOnItems.length === 0">
+                <div style="padding: 24px; text-align: center; color: var(--text-muted);">No items yet.</div>
+              </template>
+              <template x-if="isAdmin">
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                  <input type="text" x-model="newWorkingOnTitle" placeholder="Add new item..." @keydown.enter="addWorkingOnItem()" style="flex: 1; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 14px;">
+                  <button @click="addWorkingOnItem()" class="btn btn-primary" style="padding: 8px 16px;">Add</button>
+                </div>
+              </template>
+            </div>
+          </div>
         </section>
 
         <!-- SEO VIEW -->
@@ -188,19 +222,53 @@
             <div class="stat-card">
               <span class="stat-label">On page 1</span>
               <span class="stat-value" x-text="seoStats.onPageOne || '—'"></span>
-              <span class="stat-note">top 10 on Google</span>
+              <span class="stat-note">position ≤ 10</span>
             </div>
             <div class="stat-card">
-              <span class="stat-label">Climbing</span>
-              <span class="stat-value" x-text="seoStats.climbing || '—'"></span>
+              <span class="stat-label">Close to page 1</span>
+              <span class="stat-value" x-text="seoStats.closeToPageOne || '—'"></span>
+              <span class="stat-note">positions 11-20</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Moved up</span>
+              <span class="stat-value" x-text="seoStats.movedUp || '—'"></span>
               <span class="stat-note">vs last month</span>
             </div>
-            <div class="stat-card">
-              <span class="stat-label">Gaps</span>
-              <span class="stat-value" x-text="seoStats.gaps || '—'"></span>
-              <span class="stat-note">no ranking yet</span>
-            </div>
           </div>
+
+          <!-- Opportunities: Close to page 1 -->
+          <template x-if="seoOpportunities.length > 0">
+            <div class="card" style="padding: 20px;">
+              <h3 style="margin: 0 0 12px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700;">Opportunities: Close to Page 1</h3>
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--text-muted);">Keywords ranking 11-20. A small push could get these on page 1.</p>
+              <div class="flex-col gap-sm">
+                <template x-for="opp in seoOpportunities" :key="opp.keyword">
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-light);">
+                    <span style="font-size: 14px; font-weight: 500;" x-text="opp.keyword"></span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <span style="font-size: 13px; color: var(--text-muted);" x-text="'Position ' + (opp.position ? opp.position.toFixed(1) : '—')"></span>
+                      <span class="badge badge-info" x-show="opp.previousPosition" x-text="'was ' + (opp.previousPosition ? opp.previousPosition.toFixed(1) : '')"></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Moved Up List -->
+          <template x-if="seoMovedUpList.length > 0">
+            <div class="card" style="padding: 20px;">
+              <h3 style="margin: 0 0 12px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700;">Moved Up This Month</h3>
+              <div class="flex-col gap-sm">
+                <template x-for="kw in seoMovedUpList" :key="kw.keyword">
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-light);">
+                    <span style="font-size: 14px; font-weight: 500;" x-text="kw.keyword"></span>
+                    <span class="badge badge-success" x-text="kw.previousPosition + ' → ' + kw.position"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
 
           <!-- Keywords Table -->
           <div class="flex-col gap-md">
@@ -846,12 +914,70 @@
             <button class="tab" :class="{ active: reportTab === 'social' }" @click="reportTab = 'social'">Social Reporting</button>
           </div>
 
-          <!-- Social Reporting Empty State -->
+          <!-- Social Reporting - Admin form or metrics display -->
           <template x-if="reportTab === 'social'">
-            <div class="card" style="padding: 48px 24px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-              <h3 style="margin: 0 0 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px;">Facebook + Instagram reporting is being connected.</h3>
-              <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Numbers start next month.</p>
+            <div class="flex-col gap-lg">
+              <!-- Admin Form -->
+              <template x-if="isAdmin">
+                <div class="card" style="padding: 24px;">
+                  <h3 style="margin: 0 0 16px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;">Enter Social Metrics for <span x-text="formatMonth(metricsMonth)"></span></h3>
+                  <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    <div>
+                      <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Reach</label>
+                      <input type="number" x-model="metaForm.reach" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    </div>
+                    <div>
+                      <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Engagement</label>
+                      <input type="number" x-model="metaForm.engagement" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    </div>
+                    <div>
+                      <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">New Followers</label>
+                      <input type="number" x-model="metaForm.new_followers" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    </div>
+                    <div>
+                      <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Posts Published</label>
+                      <input type="number" x-model="metaForm.posts_published" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    </div>
+                  </div>
+                  <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Summary Bullets (3 short highlights)</h4>
+                  <div class="flex-col gap-sm" style="margin-bottom: 16px;">
+                    <input type="text" x-model="metaForm.summary1" placeholder="First highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    <input type="text" x-model="metaForm.summary2" placeholder="Second highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    <input type="text" x-model="metaForm.summary3" placeholder="Third highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <button @click="saveMetaMetrics()" class="btn btn-primary" :disabled="savingMeta" x-text="savingMeta ? 'Saving...' : 'Save Social Metrics'"></button>
+                </div>
+              </template>
+
+              <!-- Non-admin: Show metrics if data exists, else empty state -->
+              <template x-if="!isAdmin && (!metrics.meta || Object.keys(metrics.meta).length === 0)">
+                <div class="card" style="padding: 48px 24px; text-align: center;">
+                  <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                  <h3 style="margin: 0 0 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px;">Facebook + Instagram reporting is being connected.</h3>
+                  <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Numbers start next month.</p>
+                </div>
+              </template>
+
+              <!-- Show metrics if data exists -->
+              <template x-if="metrics.meta && Object.keys(metrics.meta).length > 0">
+                <div class="flex-col gap-lg">
+                  <div class="summary-box" x-show="currentSummary.length > 0">
+                    <span class="summary-box-label">THE SHORT VERSION</span>
+                    <template x-for="line in currentSummary" :key="line">
+                      <span class="summary-box-item">→ <span x-text="line"></span></span>
+                    </template>
+                  </div>
+                  <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <template x-for="metric in currentMetrics" :key="metric.key">
+                      <div class="stat-card">
+                        <span class="stat-label" x-text="metric.label"></span>
+                        <span class="stat-value" style="font-size: 30px;" x-text="metric.value || '—'"></span>
+                        <span class="stat-note" x-show="metric.change" :class="metric.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(metric.change)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
             </div>
           </template>
 
@@ -869,13 +995,22 @@
                 </template>
               </div>
 
-              <!-- Metrics Grid -->
+              <!-- Headline metric for Website Traffic -->
+              <template x-if="reportTab === 'web' && headlineMetric">
+                <div class="hero-card" style="background: linear-gradient(135deg, #0e4d5c 0%, #18a39a 100%);">
+                  <span class="hero-card-label" x-text="headlineMetric.label"></span>
+                  <span class="hero-card-value" x-text="headlineMetric.value || '—'"></span>
+                  <span class="hero-card-note" x-show="headlineMetric.change" x-text="formatChange(headlineMetric.change)"></span>
+                </div>
+              </template>
+
+              <!-- Metrics Grid with month-over-month -->
               <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <template x-for="metric in currentMetrics" :key="metric.label">
+                <template x-for="metric in currentMetrics.filter(m => !m.isHeadline || reportTab !== 'web')" :key="metric.key">
                   <div class="stat-card">
                     <span class="stat-label" x-text="metric.label"></span>
                     <span class="stat-value" style="font-size: 30px;" x-text="metric.value || '—'"></span>
-                    <span class="badge badge-success" x-show="metric.change" x-text="metric.change" style="align-self: flex-start;"></span>
+                    <span class="stat-note" x-show="metric.change" :style="metric.change?.improved ? 'color: #18a39a' : 'color: var(--text-muted)'" x-text="formatChange(metric.change)"></span>
                   </div>
                 </template>
                 <template x-if="currentMetrics.length === 0">
