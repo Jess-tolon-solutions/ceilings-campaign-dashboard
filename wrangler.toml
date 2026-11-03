@@ -5,8 +5,9 @@ pages_build_output_dir = "public"
 [vars]
 ADMIN_EMAILS = "jess@tolonsolutions.com,jessicatolon@gmail.com"
 CF_ACCESS_TEAM_DOMAIN = "withered-dust-c5cb"
-# CF_ACCESS_AUD must be set in Cloudflare Pages dashboard (Settings > Environment variables)
-# It's the Application Audience (AUD) Tag from Zero Trust > Access > Applications
+# CF_ACCESS_AUD: Get from Zero Trust > Access > Applications > [your app] > Overview > Application Audience (AUD) Tag
+# Or check the Cloudflare Pages deployment logs - the middleware logs the JWT's aud claim when this is missing
+CF_ACCESS_AUD = ""
 
 [[d1_databases]]
 binding = "DB"

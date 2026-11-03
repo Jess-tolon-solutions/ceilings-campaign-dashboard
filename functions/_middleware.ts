@@ -200,15 +200,27 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
   const teamDomain = env.CF_ACCESS_TEAM_DOMAIN;
   const expectedAud = env.CF_ACCESS_AUD;
 
-  // If env vars not configured, log warning but allow request through Access protection
-  // (Access will have already validated the JWT at the edge)
+  // If env vars not configured, log specific missing vars and try fallback
   if (!teamDomain || !expectedAud) {
-    console.warn('CF_ACCESS_TEAM_DOMAIN or CF_ACCESS_AUD not set - relying on Access edge validation');
-    // Try to extract identity from the JWT payload without full validation
+    const missing: string[] = [];
+    if (!teamDomain) missing.push('CF_ACCESS_TEAM_DOMAIN');
+    if (!expectedAud) missing.push('CF_ACCESS_AUD');
+
+    // Try to extract identity from JWT payload without full signature validation
+    // (Access edge already validated it, we just need the claims)
     try {
       const parts = jwt.split('.');
       if (parts.length === 3) {
         const payload: JWTPayload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
+
+        // Log the AUD from JWT so operator can set CF_ACCESS_AUD env var
+        if (!expectedAud && payload.aud) {
+          console.error(`CF_ACCESS_AUD not set. JWT contains aud: ${JSON.stringify(payload.aud)}`);
+        }
+        if (!teamDomain) {
+          console.error(`CF_ACCESS_TEAM_DOMAIN not set. JWT issuer: ${payload.iss}`);
+        }
+
         if (payload.type === 'app') {
           // Service token - only allow on designated paths
           if (!isServiceTokenPath(url.pathname)) {
@@ -227,6 +239,13 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
       }
     } catch (e) {
       console.error('Failed to parse JWT payload:', e);
+      return new Response(JSON.stringify({
+        error: 'Server configuration error',
+        missing: missing
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     // Fallback to Access-provided header
     const accessEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
@@ -234,8 +253,12 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
       data.userEmail = accessEmail;
       return next();
     }
-    return new Response(JSON.stringify({ error: 'Unable to verify identity' }), {
-      status: 401,
+    return new Response(JSON.stringify({
+      error: 'Server configuration error',
+      missing: missing,
+      hint: 'Set CF_ACCESS_AUD in wrangler.toml [vars] or Pages dashboard'
+    }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
