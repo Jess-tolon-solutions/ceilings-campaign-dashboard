@@ -28,6 +28,19 @@ export const onRequestGet: PagesFunction<Env, string, Data> = async (context) =>
   const { env } = context;
 
   try {
+    // Try to create table if it doesn't exist (migration fallback)
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS working_on (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'waiting', 'done')),
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        updated_by TEXT
+      )
+    `).run();
+
     const result = await env.DB.prepare(`
       SELECT id, title, status, sort_order
       FROM working_on
