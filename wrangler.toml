@@ -7,7 +7,7 @@ ADMIN_EMAILS = "jess@tolonsolutions.com,jessicatolon@gmail.com"
 CF_ACCESS_TEAM_DOMAIN = "withered-dust-c5cb"
 # CF_ACCESS_AUD: Get from Zero Trust > Access > Applications > [your app] > Overview > Application Audience (AUD) Tag
 # Or check the Cloudflare Pages deployment logs - the middleware logs the JWT's aud claim when this is missing
-CF_ACCESS_AUD = ""
+CF_ACCESS_AUD = "ae6eb5411f7e4e8855746c391d46f17445cdba667aeb00aacbdf2ecdbef003cb"
 
 [[d1_databases]]
 binding = "DB"
