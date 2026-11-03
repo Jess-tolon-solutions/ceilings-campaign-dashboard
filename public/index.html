@@ -836,7 +836,7 @@
               <h1>Monthly Performance</h1>
               <p>Updated automatically at the start of each month.</p>
             </div>
-            <button class="btn btn-secondary" x-text="selectedMonth || 'October 2026'"> ▾</button>
+            <button class="btn btn-secondary" x-text="formatMonth(metricsMonth) || 'Loading...'"></button>
           </div>
 
           <!-- Tabs -->
