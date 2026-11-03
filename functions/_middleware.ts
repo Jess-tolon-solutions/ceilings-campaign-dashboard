@@ -230,11 +230,8 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
         // Service token (type=app, no email) - only allowed on designated paths
         if (payload.type === 'app' || payload.common_name) {
           if (!isServiceTokenPath(url.pathname)) {
-            return new Response(JSON.stringify({
-              error: 'Service tokens not allowed on this endpoint',
-              path: url.pathname,
-              allowedPaths: SERVICE_TOKEN_PATHS
-            }), {
+            console.error(`Service token rejected: path=${url.pathname}, allowed=${SERVICE_TOKEN_PATHS.join(',')}`);
+            return new Response(JSON.stringify({ error: 'Forbidden' }), {
               status: 403,
               headers: { 'Content-Type': 'application/json' }
             });
@@ -282,9 +279,6 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
     });
   }
 
-  // Debug: log token type for troubleshooting
-  console.log(`JWT validated: email=${payload.email || 'none'}, type=${payload.type || 'none'}, common_name=${payload.common_name || 'none'}, path=${url.pathname}`);
-
   // Set user identity based on token type
   // Check for user token first (has email) - allowed on all routes
   if (payload.email) {
@@ -295,11 +289,8 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
   // Service token (type=app, no email) - only allowed on designated paths
   if (payload.type === 'app' || payload.common_name) {
     if (!isServiceTokenPath(url.pathname)) {
-      return new Response(JSON.stringify({
-        error: 'Service tokens not allowed on this endpoint',
-        path: url.pathname,
-        allowedPaths: SERVICE_TOKEN_PATHS
-      }), {
+      console.error(`Service token rejected: path=${url.pathname}, allowed=${SERVICE_TOKEN_PATHS.join(',')}`);
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }
       });

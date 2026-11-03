@@ -83,7 +83,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       }
     }
 
-    console.log('Metrics API returning:', { month, metricsCount: Object.keys(metrics.ga4 || {}).length + Object.keys(metrics.gsc || {}).length });
     return new Response(JSON.stringify({
       metrics,
       summaries,
