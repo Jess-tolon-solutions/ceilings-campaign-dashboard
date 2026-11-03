@@ -318,15 +318,18 @@ function app() {
     async loadMetrics() {
       try {
         const res = await fetch('/api/metrics');
+        console.log('Metrics response status:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('Metrics data:', JSON.stringify(data, null, 2));
           this.metrics = data.metrics || {};
           this.summaries = data.summaries || {};
           this.metricsMonth = data.month || null;
+        } else {
+          console.error('Metrics response not OK:', await res.text());
         }
       } catch (e) {
-        // Metrics endpoint may not exist yet
-        console.log('Metrics data not available yet');
+        console.error('Metrics fetch error:', e);
       }
     },
 
