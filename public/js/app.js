@@ -59,6 +59,16 @@ function app() {
     // Modal state
     showImportModal: false,
     selectedFile: null,
+    showResultsImportModal: false,
+    resultsImportRound: 1,
+    resultsImportFile: null,
+    resultsImportBookedJobs: 0,
+    resultsImportPreview: null,
+
+    // Round selection
+    selectedRound: 3,
+    emailResults: {},
+    round2Counts: { approved: 0, held: 0 },
 
     // Stats (computed from data)
     stats: {
@@ -237,7 +247,9 @@ function app() {
         this.loadMailTestData(),
         this.loadSeoData(),
         this.loadMetrics(),
-        this.loadCallSheet()
+        this.loadCallSheet(),
+        this.loadEmailResults(),
+        this.loadRound2Counts()
       ]);
     },
 
@@ -254,9 +266,17 @@ function app() {
     },
 
     // Load clients
-    async loadClients() {
+    // campaignId: filter by campaign (default: active campaign)
+    // excludeApprovedIn: comma-separated campaign IDs to exclude already-approved clients
+    async loadClients(campaignId = null, excludeApprovedIn = null) {
       try {
-        const res = await fetch('/api/clients');
+        let url = '/api/clients';
+        const params = new URLSearchParams();
+        if (campaignId) params.set('campaign_id', campaignId);
+        if (excludeApprovedIn) params.set('exclude_approved_in', excludeApprovedIn);
+        if (params.toString()) url += '?' + params.toString();
+
+        const res = await fetch(url);
         if (res.ok) {
           this.clients = await res.json();
         }
@@ -347,6 +367,106 @@ function app() {
         }
       } catch (e) {
         console.log('Call sheet data not available yet');
+      }
+    },
+
+    // Load email campaign results
+    async loadEmailResults() {
+      try {
+        const res = await fetch('/api/email-results');
+        if (res.ok) {
+          const data = await res.json();
+          // Index by campaign_id
+          this.emailResults = {};
+          for (const result of data.results || []) {
+            this.emailResults[result.campaign_id] = result;
+          }
+        }
+      } catch (e) {
+        console.log('Email results not available yet');
+      }
+    },
+
+    // Load Round 2 counts
+    async loadRound2Counts() {
+      try {
+        // Campaign ID 2 is Round 2
+        const res = await fetch('/api/clients?campaign_id=2');
+        if (res.ok) {
+          const clients = await res.json();
+          const approved = clients.filter(c => c.decision === 'yes').length;
+          const held = clients.filter(c => c.hold || c.decision === 'later').length;
+          this.round2Counts = { approved, held };
+        }
+      } catch (e) {
+        console.log('Round 2 counts not available yet');
+      }
+    },
+
+    // Select round and reload clients
+    async selectRound(round) {
+      this.selectedRound = round;
+      if (round === 3) {
+        // Round 3 excludes clients approved in Round 2
+        await this.loadClients(3, '2');
+      } else {
+        await this.loadClients(round);
+      }
+    },
+
+    // Preview results import
+    async previewResultsImport() {
+      if (!this.resultsImportFile) return;
+
+      const formData = new FormData();
+      formData.append('file', this.resultsImportFile);
+      formData.append('campaign_id', this.resultsImportRound.toString());
+      formData.append('preview', 'true');
+      formData.append('booked_jobs', this.resultsImportBookedJobs.toString());
+
+      try {
+        const res = await fetch('/api/import-email-results', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.preview) {
+          this.resultsImportPreview = data.results;
+        } else {
+          alert('Preview failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Preview failed: ' + e.message);
+      }
+    },
+
+    // Confirm results import
+    async confirmResultsImport() {
+      if (!this.resultsImportFile || !this.resultsImportPreview) return;
+
+      const formData = new FormData();
+      formData.append('file', this.resultsImportFile);
+      formData.append('campaign_id', this.resultsImportRound.toString());
+      formData.append('preview', 'false');
+      formData.append('booked_jobs', this.resultsImportBookedJobs.toString());
+
+      try {
+        const res = await fetch('/api/import-email-results', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          await this.loadEmailResults();
+          this.showResultsImportModal = false;
+          this.resultsImportFile = null;
+          this.resultsImportPreview = null;
+          this.resultsImportBookedJobs = 0;
+        } else {
+          alert('Import failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Import failed: ' + e.message);
       }
     },
 

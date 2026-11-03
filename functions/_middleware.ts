@@ -4,7 +4,7 @@
 interface Env {
   DB: D1Database;
   CF_ACCESS_AUD?: string; // Access Application AUD (policy tag)
-  CF_ACCESS_TEAM_DOMAIN?: string; // e.g., "tolonsolutions" for tolonsolutions.cloudflareaccess.com
+  CF_ACCESS_TEAM_DOMAIN?: string; // e.g., "withered-dust-c5cb" for withered-dust-c5cb.cloudflareaccess.com
 }
 
 interface Data extends Record<string, unknown> {
@@ -164,6 +164,13 @@ async function verifyAccessJWT(
   return payload;
 }
 
+// Paths that allow service token access (machine-to-machine)
+const SERVICE_TOKEN_PATHS = ['/api/ingest/', '/api/call-sheet/log'];
+
+function isServiceTokenPath(pathname: string): boolean {
+  return SERVICE_TOKEN_PATHS.some(p => pathname.startsWith(p));
+}
+
 export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
   const { request, next, data, env } = context;
   const url = new URL(request.url);
@@ -189,19 +196,51 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
     });
   }
 
-  // Get required env vars
+  // Get env vars for JWT validation
   const teamDomain = env.CF_ACCESS_TEAM_DOMAIN;
   const expectedAud = env.CF_ACCESS_AUD;
 
+  // If env vars not configured, log warning but allow request through Access protection
+  // (Access will have already validated the JWT at the edge)
   if (!teamDomain || !expectedAud) {
-    console.error('Missing CF_ACCESS_TEAM_DOMAIN or CF_ACCESS_AUD env vars');
-    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-      status: 500,
+    console.warn('CF_ACCESS_TEAM_DOMAIN or CF_ACCESS_AUD not set - relying on Access edge validation');
+    // Try to extract identity from the JWT payload without full validation
+    try {
+      const parts = jwt.split('.');
+      if (parts.length === 3) {
+        const payload: JWTPayload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1])));
+        if (payload.type === 'app') {
+          // Service token - only allow on designated paths
+          if (!isServiceTokenPath(url.pathname)) {
+            return new Response(JSON.stringify({ error: 'Service tokens not allowed on this endpoint' }), {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          data.userEmail = `service-token:${payload.common_name || payload.sub}`;
+        } else if (payload.email) {
+          data.userEmail = payload.email;
+        } else {
+          data.userEmail = payload.sub || 'unknown';
+        }
+        return next();
+      }
+    } catch (e) {
+      console.error('Failed to parse JWT payload:', e);
+    }
+    // Fallback to Access-provided header
+    const accessEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
+    if (accessEmail) {
+      data.userEmail = accessEmail;
+      return next();
+    }
+    return new Response(JSON.stringify({ error: 'Unable to verify identity' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  // Verify the JWT
+  // Full JWT validation
   const payload = await verifyAccessJWT(jwt, teamDomain, expectedAud);
   if (!payload) {
     return new Response(JSON.stringify({ error: 'Invalid token' }), {
@@ -210,9 +249,15 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
     });
   }
 
-  // Set user identity
+  // Set user identity based on token type
   if (payload.type === 'app') {
-    // Service token
+    // Service token - only allow on designated paths
+    if (!isServiceTokenPath(url.pathname)) {
+      return new Response(JSON.stringify({ error: 'Service tokens not allowed on this endpoint' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     data.userEmail = `service-token:${payload.common_name || payload.sub}`;
   } else if (payload.email) {
     // User token

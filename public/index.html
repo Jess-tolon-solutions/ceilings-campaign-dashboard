@@ -535,90 +535,205 @@
             <div style="display: flex; flex-direction: column; gap: 8px; max-width: 560px;">
               <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #cdeef1;">EMAIL CAMPAIGN</span>
               <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Client Re-engagement</h1>
-              <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5;">Pick which past clients get the Round 3 email. Tap Yes, No or Later. Every tap saves on its own.</p>
+              <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5;" x-text="selectedRound === 3 ? 'Pick which past clients get the Round 3 email. Tap Yes, No or Later. Every tap saves on its own.' : selectedRound === 2 ? 'Round 2 is approved and ready to launch. 26 contacts selected.' : 'Round 1 was sent in September. View results below.'"></p>
             </div>
             <div class="round-pills">
-              <span class="round-pill">Round 1 · Sept · sent</span>
-              <span class="round-pill">Round 2 · Sept 22 · sent</span>
-              <span class="round-pill active">Round 3 · your picks</span>
+              <button class="round-pill" :class="{ active: selectedRound === 1 }" @click="selectRound(1)">Round 1 (Sent · Sept)</button>
+              <button class="round-pill" :class="{ active: selectedRound === 2 }" @click="selectRound(2)">Round 2 (Approved · not yet sent)</button>
+              <button class="round-pill" :class="{ active: selectedRound === 3 }" @click="selectRound(3)">Round 3 (Jonathan picking)</button>
             </div>
           </div>
 
-          <!-- Selection Counts -->
-          <div class="grid-4">
-            <div class="stat-card">
-              <span class="stat-label">Yes</span>
-              <span class="stat-value text-teal" x-text="selectionCounts.yes"></span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">No</span>
-              <span class="stat-value" x-text="selectionCounts.no"></span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Later</span>
-              <span class="stat-value" style="color: #8a5a00;" x-text="selectionCounts.later"></span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Not reviewed</span>
-              <span class="stat-value" x-text="selectionCounts.pending"></span>
-              <div style="height: 6px; background: #e7eef0; border-radius: var(--radius-full); overflow: hidden; margin-top: 6px;">
-                <div style="height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, #116782, #5eff00);" :style="'width: ' + reviewProgress + '%'"></div>
+          <!-- Results Card for Round 1 -->
+          <template x-if="selectedRound === 1">
+            <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+              <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Round 1 Results</h2>
+                  <span style="font-size: 14px; color: var(--text-muted);">Sent September 2026</span>
+                </div>
+                <template x-if="isAdmin">
+                  <button class="btn btn-secondary btn-sm" @click="showResultsImportModal = true; resultsImportRound = 1">Import Results</button>
+                </template>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1px; background: var(--border-light);">
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Sent</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.sent || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Delivered</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.delivered || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Opened</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.opened || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Clicked</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.clicked || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Bounced</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #b0592a;" x-text="emailResults[1]?.bounced || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Link scanners</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--text-muted);" x-text="emailResults[1]?.link_scanner_clicks || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Booked jobs</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #2e7d4f;" x-text="emailResults[1]?.booked_jobs || '—'"></div>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
 
-          <!-- Search & Filters -->
-          <div class="search-filters">
-            <input type="search" class="search-input" placeholder="Search company or contact" x-model="clientSearch">
-            <button class="filter-btn" @click="toggleSegmentFilter()">
-              <span x-text="segmentFilter || 'All segments'"></span>
-            </button>
-            <button class="filter-btn" @click="toggleStatusFilter()">
-              <span x-text="decisionFilter || 'Not reviewed'"></span>
-            </button>
-          </div>
-
-          <!-- Client List -->
-          <div class="card card-elevated" style="padding: 0; overflow: hidden;">
-            <template x-for="client in filteredClients" :key="client.id">
-              <div class="client-row">
-                <div class="client-info">
-                  <span class="client-avatar" :style="'background: ' + getClientColor(client)">
-                    <span x-text="getClientInitials(client)"></span>
-                  </span>
-                  <div class="client-details">
-                    <div class="client-name-row">
-                      <span class="client-company" x-text="client.company"></span>
-                      <span class="badge badge-danger" x-show="client.do_not_send" style="font-size: 11px; padding: 4px 8px;">Do Not Send</span>
-                      <span class="badge badge-warning" x-show="client.hold" style="font-size: 11px; padding: 4px 8px;">On Hold</span>
-                      <span class="badge badge-success" x-show="client.client_status === 'existing_client'" style="font-size: 11px; padding: 4px 8px;">Existing</span>
-                    </div>
-                    <span class="client-meta" x-text="[client.contact_name, client.segment, client.county].filter(Boolean).join(' · ')"></span>
+          <!-- Results Card for Round 2 -->
+          <template x-if="selectedRound === 2">
+            <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+              <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light);">
+                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Round 2 Status</h2>
+                <span style="font-size: 14px; color: var(--teal-700); font-weight: 600;">Approved, ready to launch</span>
+              </div>
+              <div style="padding: 22px; display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                  <div style="background: #f0faf8; border-radius: var(--radius-md); padding: 14px 18px; display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Approved contacts</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 28px; font-weight: 700; color: var(--teal-700);" x-text="round2Counts.approved"></span>
+                  </div>
+                  <div style="background: #fef8e8; border-radius: var(--radius-md); padding: 14px 18px; display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Held (with notes)</span>
+                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 28px; font-weight: 700; color: #8a5a00;" x-text="round2Counts.held"></span>
                   </div>
                 </div>
-                <div class="toggle-group">
-                  <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')" :disabled="client.do_not_send">Yes</button>
-                  <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
-                  <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
+                <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 16px; color: var(--text-muted); font-size: 14px;">
+                  Results will appear after launch.
                 </div>
               </div>
-            </template>
-            <template x-if="filteredClients.length === 0">
-              <div class="empty-state">
-                <div class="empty-state-title">No clients match your filters</div>
-                <div class="empty-state-text">Try adjusting your search or filter criteria.</div>
-              </div>
-            </template>
-          </div>
+            </div>
+          </template>
 
-          <!-- Admin Lock Button -->
-          <div x-show="isAdmin" style="display: flex; justify-content: flex-end; gap: 12px;">
-            <button class="btn btn-secondary" @click="showImportModal = true">Import Clients</button>
-            <button class="btn btn-primary" @click="lockRound()" :disabled="selectionCounts.yes === 0">
-              Lock Round (exports <span x-text="selectionCounts.yes"></span> clients)
-            </button>
-          </div>
+          <!-- Round 3 Selection UI -->
+          <template x-if="selectedRound === 3">
+            <div class="flex-col gap-lg">
+              <!-- Selection Counts -->
+              <div class="grid-4">
+                <div class="stat-card">
+                  <span class="stat-label">Yes</span>
+                  <span class="stat-value text-teal" x-text="selectionCounts.yes"></span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">No</span>
+                  <span class="stat-value" x-text="selectionCounts.no"></span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Later</span>
+                  <span class="stat-value" style="color: #8a5a00;" x-text="selectionCounts.later"></span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Not reviewed</span>
+                  <span class="stat-value" x-text="selectionCounts.pending"></span>
+                  <div style="height: 6px; background: #e7eef0; border-radius: var(--radius-full); overflow: hidden; margin-top: 6px;">
+                    <div style="height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, #116782, #5eff00);" :style="'width: ' + reviewProgress + '%'"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Info banner about exclusions -->
+              <div style="background: #e8f4f8; border: 1px solid #b8dce6; border-radius: var(--radius-md); padding: 14px 18px; font-size: 14px; color: #0e4d5c;">
+                Showing contacts not already approved for Round 2. <span x-text="round2Counts.approved"></span> contacts excluded.
+              </div>
+
+              <!-- Search & Filters -->
+              <div class="search-filters">
+                <input type="search" class="search-input" placeholder="Search company or contact" x-model="clientSearch">
+                <button class="filter-btn" @click="toggleSegmentFilter()">
+                  <span x-text="segmentFilter || 'All segments'"></span>
+                </button>
+                <button class="filter-btn" @click="toggleStatusFilter()">
+                  <span x-text="decisionFilter || 'Not reviewed'"></span>
+                </button>
+              </div>
+
+              <!-- Client List -->
+              <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+                <template x-for="client in filteredClients" :key="client.id">
+                  <div class="client-row">
+                    <div class="client-info">
+                      <span class="client-avatar" :style="'background: ' + getClientColor(client)">
+                        <span x-text="getClientInitials(client)"></span>
+                      </span>
+                      <div class="client-details">
+                        <div class="client-name-row">
+                          <span class="client-company" x-text="client.company"></span>
+                          <span class="badge badge-danger" x-show="client.do_not_send" style="font-size: 11px; padding: 4px 8px;">Do Not Send</span>
+                          <span class="badge badge-warning" x-show="client.hold" style="font-size: 11px; padding: 4px 8px;">On Hold</span>
+                          <span class="badge badge-success" x-show="client.client_status === 'existing_client'" style="font-size: 11px; padding: 4px 8px;">Existing</span>
+                        </div>
+                        <span class="client-meta" x-text="[client.contact_name, client.segment, client.county].filter(Boolean).join(' · ')"></span>
+                      </div>
+                    </div>
+                    <div class="toggle-group">
+                      <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')" :disabled="client.do_not_send">Yes</button>
+                      <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
+                      <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="filteredClients.length === 0">
+                  <div class="empty-state">
+                    <div class="empty-state-title">No clients match your filters</div>
+                    <div class="empty-state-text">Try adjusting your search or filter criteria.</div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Admin Lock Button -->
+              <div x-show="isAdmin" style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn btn-secondary" @click="showImportModal = true">Import Clients</button>
+                <button class="btn btn-primary" @click="lockRound()" :disabled="selectionCounts.yes === 0">
+                  Lock Round (exports <span x-text="selectionCounts.yes"></span> clients)
+                </button>
+              </div>
+            </div>
+          </template>
         </section>
+
+        <!-- Results Import Modal -->
+        <div x-show="showResultsImportModal" class="modal-overlay" @click.self="showResultsImportModal = false" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+          <div class="card" style="width: 100%; max-width: 500px; padding: 24px;">
+            <h2 style="margin: 0 0 16px 0; font-family: 'Plus Jakarta Sans', sans-serif;">Import Round Results</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Upload a Jobber email results export (CSV) for Round <span x-text="resultsImportRound"></span>.</p>
+            <form @submit.prevent="previewResultsImport()">
+              <input type="file" accept=".csv" @change="resultsImportFile = $event.target.files[0]" style="margin-bottom: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                <label style="font-size: 14px;">
+                  Booked jobs (manual count):
+                  <input type="number" min="0" x-model="resultsImportBookedJobs" style="margin-left: 8px; width: 80px; padding: 6px 10px; border: 1px solid var(--border-light); border-radius: var(--radius-sm);">
+                </label>
+              </div>
+              <template x-if="resultsImportPreview">
+                <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+                  <div style="font-weight: 600; margin-bottom: 8px;">Preview:</div>
+                  <div style="font-size: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                    <span>Sent: <span x-text="resultsImportPreview.sent"></span></span>
+                    <span>Delivered: <span x-text="resultsImportPreview.delivered"></span></span>
+                    <span>Opened: <span x-text="resultsImportPreview.opened"></span></span>
+                    <span>Clicked: <span x-text="resultsImportPreview.clicked"></span></span>
+                    <span>Bounced: <span x-text="resultsImportPreview.bounced"></span></span>
+                    <span>Link scanners: <span x-text="resultsImportPreview.link_scanner_clicks"></span></span>
+                  </div>
+                </div>
+              </template>
+              <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn btn-secondary" @click="showResultsImportModal = false">Cancel</button>
+                <button type="submit" class="btn btn-secondary" :disabled="!resultsImportFile">Preview</button>
+                <button type="button" class="btn btn-primary" @click="confirmResultsImport()" :disabled="!resultsImportPreview">Import</button>
+              </div>
+            </form>
+          </div>
+        </div>
 
         <!-- DIRECT MAIL VIEW -->
         <section x-show="currentView === 'directmail'" class="flex-col gap-lg">
