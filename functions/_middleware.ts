@@ -221,20 +221,30 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
           console.error(`CF_ACCESS_TEAM_DOMAIN not set. JWT issuer: ${payload.iss}`);
         }
 
-        if (payload.type === 'app') {
-          // Service token - only allow on designated paths
+        // Check for user token first (has email) - allowed on all routes
+        if (payload.email) {
+          data.userEmail = payload.email;
+          return next();
+        }
+
+        // Service token (type=app, no email) - only allowed on designated paths
+        if (payload.type === 'app' || payload.common_name) {
           if (!isServiceTokenPath(url.pathname)) {
-            return new Response(JSON.stringify({ error: 'Service tokens not allowed on this endpoint' }), {
+            return new Response(JSON.stringify({
+              error: 'Service tokens not allowed on this endpoint',
+              path: url.pathname,
+              allowedPaths: SERVICE_TOKEN_PATHS
+            }), {
               status: 403,
               headers: { 'Content-Type': 'application/json' }
             });
           }
           data.userEmail = `service-token:${payload.common_name || payload.sub}`;
-        } else if (payload.email) {
-          data.userEmail = payload.email;
-        } else {
-          data.userEmail = payload.sub || 'unknown';
+          return next();
         }
+
+        // Fallback for other valid tokens
+        data.userEmail = payload.sub || 'unknown';
         return next();
       }
     } catch (e) {
@@ -272,22 +282,33 @@ export const onRequest: PagesFunction<Env, string, Data> = async (context) => {
     });
   }
 
+  // Debug: log token type for troubleshooting
+  console.log(`JWT validated: email=${payload.email || 'none'}, type=${payload.type || 'none'}, common_name=${payload.common_name || 'none'}, path=${url.pathname}`);
+
   // Set user identity based on token type
-  if (payload.type === 'app') {
-    // Service token - only allow on designated paths
+  // Check for user token first (has email) - allowed on all routes
+  if (payload.email) {
+    data.userEmail = payload.email;
+    return next();
+  }
+
+  // Service token (type=app, no email) - only allowed on designated paths
+  if (payload.type === 'app' || payload.common_name) {
     if (!isServiceTokenPath(url.pathname)) {
-      return new Response(JSON.stringify({ error: 'Service tokens not allowed on this endpoint' }), {
+      return new Response(JSON.stringify({
+        error: 'Service tokens not allowed on this endpoint',
+        path: url.pathname,
+        allowedPaths: SERVICE_TOKEN_PATHS
+      }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }
     data.userEmail = `service-token:${payload.common_name || payload.sub}`;
-  } else if (payload.email) {
-    // User token
-    data.userEmail = payload.email;
-  } else {
-    data.userEmail = payload.sub;
+    return next();
   }
 
+  // Fallback for other valid tokens (use sub as identity)
+  data.userEmail = payload.sub || 'unknown';
   return next();
 };
