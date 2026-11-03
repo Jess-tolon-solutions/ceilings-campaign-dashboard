@@ -846,54 +846,68 @@
             <button class="tab" :class="{ active: reportTab === 'social' }" @click="reportTab = 'social'">Social Reporting</button>
           </div>
 
-          <!-- Summary Box -->
-          <div class="summary-box">
-            <span class="summary-box-label">THE SHORT VERSION</span>
-            <template x-if="currentSummary.length === 0">
-              <span class="summary-box-item">No summary available for this month yet.</span>
-            </template>
-            <template x-for="line in currentSummary" :key="line">
-              <span class="summary-box-item">→ <span x-text="line"></span></span>
-            </template>
-          </div>
-
-          <!-- Metrics Grid -->
-          <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-            <template x-for="metric in currentMetrics" :key="metric.label">
-              <div class="stat-card">
-                <span class="stat-label" x-text="metric.label"></span>
-                <span class="stat-value" style="font-size: 30px;" x-text="metric.value || '—'"></span>
-                <span class="badge badge-success" x-show="metric.change" x-text="metric.change" style="align-self: flex-start;"></span>
-              </div>
-            </template>
-            <template x-if="currentMetrics.length === 0">
-              <div class="stat-card">
-                <span class="stat-label">No data</span>
-                <span class="stat-value">—</span>
-                <span class="stat-note">Metrics will appear once ingested</span>
-              </div>
-            </template>
-          </div>
-
-          <!-- Chart Placeholder -->
-          <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
-            <div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-              <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;" x-text="chartTitle"></h2>
-              <span style="font-size: 13px; color: var(--text-muted);" x-text="chartNote"></span>
+          <!-- Social Reporting Empty State -->
+          <template x-if="reportTab === 'social'">
+            <div class="card" style="padding: 48px 24px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+              <h3 style="margin: 0 0 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px;">Facebook + Instagram reporting is being connected.</h3>
+              <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Numbers start next month.</p>
             </div>
-            <div style="height: 180px; border-radius: 14px; background: linear-gradient(180deg, rgba(24,163,154,0.16) 0%, rgba(24,163,154,0.02) 100%); border: 1px dashed #b9d3d9; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px;">[6-month trend chart]</div>
-            <div style="display: flex; flex-direction: column;">
-              <template x-for="row in topRows" :key="row.label">
-                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-light); font-size: 14px;">
-                  <span x-text="row.label"></span>
-                  <span style="font-weight: 600;" x-text="row.value || '—'"></span>
+          </template>
+
+          <!-- Content for SEO and Website Traffic tabs -->
+          <template x-if="reportTab !== 'social'">
+            <div class="flex-col gap-lg">
+              <!-- Summary Box -->
+              <div class="summary-box">
+                <span class="summary-box-label">THE SHORT VERSION</span>
+                <template x-if="currentSummary.length === 0">
+                  <span class="summary-box-item">No summary available for this month yet.</span>
+                </template>
+                <template x-for="line in currentSummary" :key="line">
+                  <span class="summary-box-item">→ <span x-text="line"></span></span>
+                </template>
+              </div>
+
+              <!-- Metrics Grid -->
+              <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <template x-for="metric in currentMetrics" :key="metric.label">
+                  <div class="stat-card">
+                    <span class="stat-label" x-text="metric.label"></span>
+                    <span class="stat-value" style="font-size: 30px;" x-text="metric.value || '—'"></span>
+                    <span class="badge badge-success" x-show="metric.change" x-text="metric.change" style="align-self: flex-start;"></span>
+                  </div>
+                </template>
+                <template x-if="currentMetrics.length === 0">
+                  <div class="stat-card">
+                    <span class="stat-label">No data</span>
+                    <span class="stat-value">—</span>
+                    <span class="stat-note">Metrics will appear once ingested</span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Chart Placeholder -->
+              <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                  <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;" x-text="chartTitle"></h2>
+                  <span style="font-size: 13px; color: var(--text-muted);" x-text="chartNote"></span>
                 </div>
-              </template>
-              <template x-if="topRows.length === 0">
-                <div style="padding: 24px; text-align: center; color: var(--text-muted);">Top items will appear once data is ingested.</div>
-              </template>
+                <div style="height: 180px; border-radius: 14px; background: linear-gradient(180deg, rgba(24,163,154,0.16) 0%, rgba(24,163,154,0.02) 100%); border: 1px dashed #b9d3d9; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px;">[6-month trend chart]</div>
+                <div style="display: flex; flex-direction: column;">
+                  <template x-for="row in topRows" :key="row.label">
+                    <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-light); font-size: 14px;">
+                      <span x-text="row.label"></span>
+                      <span style="font-weight: 600;" x-text="row.value || '—'"></span>
+                    </div>
+                  </template>
+                  <template x-if="topRows.length === 0">
+                    <div style="padding: 24px; text-align: center; color: var(--text-muted);">Top items will appear once data is ingested.</div>
+                  </template>
+                </div>
+              </div>
             </div>
-          </div>
+          </template>
         </section>
 
         <!-- Import Modal (kept from original) -->
