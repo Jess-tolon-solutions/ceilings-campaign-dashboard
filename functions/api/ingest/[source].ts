@@ -9,9 +9,9 @@ interface Data extends Record<string, unknown> {
   userEmail: string;
 }
 
-type IngestSource = 'clients' | 'violations' | 'mail_list_b' | 'gsc' | 'ga4' | 'meta' | 'seo_keywords' | 'seo_pages';
+type IngestSource = 'clients' | 'violations' | 'mail_list_b' | 'gsc' | 'ga4' | 'meta' | 'facebook' | 'instagram' | 'linkedin' | 'seo_keywords' | 'seo_pages';
 
-// Payload for gsc/ga4/meta: { month, metrics: {name: value}, summary: [bullet1, bullet2, bullet3] }
+// Payload for gsc/ga4/facebook/instagram/linkedin: { month, metrics: {name: value}, summary: [bullet1, bullet2, bullet3] }
 interface MetricsPayload {
   month: string;
   metrics: Record<string, number>;
@@ -42,7 +42,7 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
   const { env, params, request, data } = context;
   const source = params.source as IngestSource;
 
-  const validSources: IngestSource[] = ['clients', 'violations', 'mail_list_b', 'gsc', 'ga4', 'meta', 'seo_keywords', 'seo_pages'];
+  const validSources: IngestSource[] = ['clients', 'violations', 'mail_list_b', 'gsc', 'ga4', 'meta', 'facebook', 'instagram', 'linkedin', 'seo_keywords', 'seo_pages'];
   if (!validSources.includes(source)) {
     return new Response(JSON.stringify({ error: `Invalid source: ${source}` }), {
       status: 400,
@@ -155,9 +155,18 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
         break;
       }
 
+      case 'meta': {
+        // Legacy source - accept but do nothing (backwards compatibility)
+        // Old sends won't break, but data is ignored
+        console.log(`[ingest] meta source deprecated, ignoring payload`);
+        break;
+      }
+
       case 'gsc':
       case 'ga4':
-      case 'meta': {
+      case 'facebook':
+      case 'instagram':
+      case 'linkedin': {
         // Payload: { month: "2024-10", metrics: { clicks: 123, ... }, summary: ["bullet1", "bullet2", "bullet3"] }
         const payload = body as MetricsPayload;
 

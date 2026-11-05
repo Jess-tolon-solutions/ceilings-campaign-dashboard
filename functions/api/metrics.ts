@@ -1,5 +1,5 @@
 // GET /api/metrics - Returns metrics and summaries for all sources with previous month comparison
-// POST /api/metrics - Admin-only: save meta metrics and summary
+// POST /api/metrics - Admin-only: save LinkedIn metrics and summary (manual entry)
 // Query param: ?month=YYYY-MM (defaults to most recent month with data)
 
 interface Env {
@@ -68,8 +68,8 @@ export const onRequestGet: PagesFunction<Env, string, Data> = async (context) =>
     ]);
 
     // Organize metrics by source
-    const metrics: Record<string, Record<string, number>> = { gsc: {}, ga4: {}, meta: {} };
-    const previousMetrics: Record<string, Record<string, number>> = { gsc: {}, ga4: {}, meta: {} };
+    const metrics: Record<string, Record<string, number>> = { gsc: {}, ga4: {}, facebook: {}, instagram: {}, linkedin: {} };
+    const previousMetrics: Record<string, Record<string, number>> = { gsc: {}, ga4: {}, facebook: {}, instagram: {}, linkedin: {} };
 
     for (const row of currentMetricsResult.results || []) {
       if (!metrics[row.source]) metrics[row.source] = {};
@@ -82,7 +82,7 @@ export const onRequestGet: PagesFunction<Env, string, Data> = async (context) =>
     }
 
     // Organize summaries by source (parse JSON bullets)
-    const summaries: Record<string, string[]> = { gsc: [], ga4: [], meta: [] };
+    const summaries: Record<string, string[]> = { gsc: [], ga4: [], facebook: [], instagram: [], linkedin: [] };
 
     for (const row of summariesResult.results || []) {
       try {
@@ -123,21 +123,23 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
   try {
     const body = await request.json() as {
       month: string;
-      source: string;
       metrics: Record<string, number>;
       summary?: string[];
     };
 
-    if (!body.month || !body.source) {
-      return new Response(JSON.stringify({ error: 'month and source are required' }), {
+    if (!body.month) {
+      return new Response(JSON.stringify({ error: 'month is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    // LinkedIn is the only manually-entered social source
+    const source = 'linkedin';
+
     // Delete existing metrics for this month+source, then insert new ones
     await env.DB.prepare(`DELETE FROM metrics_monthly WHERE month = ? AND source = ?`)
-      .bind(body.month, body.source).run();
+      .bind(body.month, source).run();
 
     // Insert each metric
     if (body.metrics) {
@@ -145,7 +147,7 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
         await env.DB.prepare(`
           INSERT INTO metrics_monthly (month, source, metric, value)
           VALUES (?, ?, ?, ?)
-        `).bind(body.month, body.source, metric, value).run();
+        `).bind(body.month, source, metric, value).run();
       }
     }
 
@@ -157,7 +159,7 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
         ON CONFLICT(month, source) DO UPDATE SET
           bullets = excluded.bullets,
           updated_at = datetime('now')
-      `).bind(body.month, body.source, JSON.stringify(body.summary)).run();
+      `).bind(body.month, source, JSON.stringify(body.summary)).run();
     }
 
     return new Response(JSON.stringify({ success: true }), {

@@ -48,9 +48,9 @@ function app() {
     newWorkingOnTitle: '',
     editingWorkingOnId: null,
 
-    // Meta form (admin only)
-    metaForm: {
-      reach: '',
+    // LinkedIn form (admin only - manual entry)
+    linkedinForm: {
+      impressions: '',
       engagement: '',
       new_followers: '',
       posts_published: '',
@@ -58,7 +58,7 @@ function app() {
       summary2: '',
       summary3: ''
     },
-    savingMeta: false,
+    savingLinkedIn: false,
 
     // Call sheet data
     callSheet: {
@@ -172,17 +172,139 @@ function app() {
 
     // Computed: current summary based on tab
     get currentSummary() {
-      const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
+      const source = { seo: 'gsc', web: 'ga4' }[this.reportTab];
+      if (!source) return []; // Social tab handles summaries differently
       return this.summaries[source] || [];
+    },
+
+    // Computed: social platform data (facebook, instagram, linkedin)
+    get socialPlatforms() {
+      const platforms = [
+        { key: 'facebook', name: 'Facebook', firstMetricLabel: 'Reach' },
+        { key: 'instagram', name: 'Instagram', firstMetricLabel: 'Reach' },
+        { key: 'linkedin', name: 'LinkedIn', firstMetricLabel: 'Impressions' }
+      ];
+
+      return platforms.map(platform => {
+        const current = this.metrics[platform.key] || {};
+        const previous = this.previousMetrics[platform.key] || {};
+        const hasData = Object.keys(current).length > 0;
+
+        const getMetricWithChange = (key, label) => {
+          const val = current[key];
+          const prev = previous[key];
+          let change = null;
+
+          if (val !== undefined && prev !== undefined && prev !== 0) {
+            const diff = val - prev;
+            change = {
+              direction: diff > 0 ? '↑' : diff < 0 ? '↓' : '',
+              previous: prev,
+              diff: Math.abs(diff),
+              improved: diff > 0
+            };
+          }
+
+          return {
+            key,
+            label,
+            value: val,
+            formattedValue: val !== undefined ? this.formatNumber(val) : null,
+            change
+          };
+        };
+
+        // Use 'reach' for facebook/instagram, 'impressions' for linkedin
+        const firstKey = platform.key === 'linkedin' ? 'impressions' : 'reach';
+
+        return {
+          ...platform,
+          hasData,
+          summary: this.summaries[platform.key] || [],
+          metrics: {
+            reach: getMetricWithChange(firstKey, platform.firstMetricLabel),
+            engagement: getMetricWithChange('engagement', 'Engagement'),
+            new_followers: getMetricWithChange('new_followers', 'New Followers'),
+            posts_published: getMetricWithChange('posts_published', 'Posts Published')
+          }
+        };
+      });
+    },
+
+    // Computed: combined social metrics across all platforms
+    get combinedSocialMetrics() {
+      const platforms = this.socialPlatforms;
+      const sum = (key) => {
+        let total = 0;
+        let hasAny = false;
+        for (const p of platforms) {
+          const val = p.metrics[key]?.value;
+          if (val !== undefined) {
+            total += val;
+            hasAny = true;
+          }
+        }
+        return hasAny ? total : null;
+      };
+
+      const prevSum = (key) => {
+        let total = 0;
+        let hasAny = false;
+        for (const p of platforms) {
+          const val = p.metrics[key]?.change?.previous;
+          if (val !== undefined) {
+            total += val;
+            hasAny = true;
+          }
+        }
+        return hasAny ? total : null;
+      };
+
+      const getWithChange = (key, label) => {
+        const val = sum(key);
+        const prev = prevSum(key);
+        let change = null;
+
+        if (val !== null && prev !== null && prev !== 0) {
+          const diff = val - prev;
+          change = {
+            direction: diff > 0 ? '↑' : diff < 0 ? '↓' : '',
+            previous: prev,
+            diff: Math.abs(diff),
+            improved: diff > 0
+          };
+        }
+
+        return {
+          key,
+          label,
+          value: val,
+          formattedValue: val !== null ? this.formatNumber(val) : null,
+          change
+        };
+      };
+
+      return {
+        reach: getWithChange('reach', 'Total Reach/Impressions'),
+        engagement: getWithChange('engagement', 'Total Engagement'),
+        new_followers: getWithChange('new_followers', 'Total New Followers'),
+        posts_published: getWithChange('posts_published', 'Total Posts Published')
+      };
+    },
+
+    // Computed: check if any social platform has data
+    get hasSocialData() {
+      return this.socialPlatforms.some(p => p.hasData);
     },
 
     // Computed: current metrics based on tab with month-over-month
     get currentMetrics() {
-      const source = { seo: 'gsc', web: 'ga4', social: 'meta' }[this.reportTab];
+      const source = { seo: 'gsc', web: 'ga4' }[this.reportTab];
+      if (!source) return []; // Social tab uses socialPlatforms instead
+
       const metricDefs = {
         gsc: ['clicks', 'impressions', 'ctr', 'average_position', 'pages_ranking'],
-        ga4: ['service_area_visitors', 'florida_visitors', 'all_visits', 'engaged_sessions', 'contact_forms_started', 'contact_page_visits', 'call_taps'],
-        meta: ['reach', 'engagement', 'new_followers', 'posts_published']
+        ga4: ['service_area_visitors', 'florida_visitors', 'all_visits', 'engaged_sessions', 'contact_forms_started', 'contact_page_visits', 'call_taps']
       };
       const labels = {
         clicks: 'Clicks from Google',
@@ -196,11 +318,7 @@ function app() {
         engaged_sessions: 'Engaged Sessions (Florida)',
         contact_forms_started: 'Contact Forms Started',
         contact_page_visits: 'Contact Page Visits',
-        call_taps: 'Phone Taps',
-        reach: 'Reach',
-        engagement: 'Engagement',
-        new_followers: 'New Followers',
-        posts_published: 'Posts Published'
+        call_taps: 'Phone Taps'
       };
 
       const sourceMetrics = this.metrics[source] || {};
@@ -376,17 +494,17 @@ function app() {
           this.metricsMonth = data.month || null;
           this.previousMonth = data.previousMonth || null;
 
-          // Pre-fill meta form if data exists
-          if (this.metrics.meta) {
-            this.metaForm.reach = this.metrics.meta.reach || '';
-            this.metaForm.engagement = this.metrics.meta.engagement || '';
-            this.metaForm.new_followers = this.metrics.meta.new_followers || '';
-            this.metaForm.posts_published = this.metrics.meta.posts_published || '';
+          // Pre-fill linkedin form if data exists
+          if (this.metrics.linkedin) {
+            this.linkedinForm.impressions = this.metrics.linkedin.impressions || '';
+            this.linkedinForm.engagement = this.metrics.linkedin.engagement || '';
+            this.linkedinForm.new_followers = this.metrics.linkedin.new_followers || '';
+            this.linkedinForm.posts_published = this.metrics.linkedin.posts_published || '';
           }
-          if (this.summaries.meta && this.summaries.meta.length >= 3) {
-            this.metaForm.summary1 = this.summaries.meta[0] || '';
-            this.metaForm.summary2 = this.summaries.meta[1] || '';
-            this.metaForm.summary3 = this.summaries.meta[2] || '';
+          if (this.summaries.linkedin && this.summaries.linkedin.length >= 3) {
+            this.linkedinForm.summary1 = this.summaries.linkedin[0] || '';
+            this.linkedinForm.summary2 = this.summaries.linkedin[1] || '';
+            this.linkedinForm.summary3 = this.summaries.linkedin[2] || '';
           }
         }
       } catch (e) {
@@ -460,23 +578,23 @@ function app() {
       }
     },
 
-    // Save meta metrics (admin only)
-    async saveMetaMetrics() {
+    // Save LinkedIn metrics (admin only - manual entry)
+    async saveLinkedInMetrics() {
       if (!this.isAdmin || !this.metricsMonth) return;
 
-      this.savingMeta = true;
+      this.savingLinkedIn = true;
       try {
         const metrics = {
-          reach: parseInt(this.metaForm.reach) || 0,
-          engagement: parseInt(this.metaForm.engagement) || 0,
-          new_followers: parseInt(this.metaForm.new_followers) || 0,
-          posts_published: parseInt(this.metaForm.posts_published) || 0
+          impressions: parseInt(this.linkedinForm.impressions) || 0,
+          engagement: parseInt(this.linkedinForm.engagement) || 0,
+          new_followers: parseInt(this.linkedinForm.new_followers) || 0,
+          posts_published: parseInt(this.linkedinForm.posts_published) || 0
         };
 
         const summary = [
-          this.metaForm.summary1,
-          this.metaForm.summary2,
-          this.metaForm.summary3
+          this.linkedinForm.summary1,
+          this.linkedinForm.summary2,
+          this.linkedinForm.summary3
         ].filter(s => s.trim());
 
         const res = await fetch('/api/metrics', {
@@ -484,7 +602,6 @@ function app() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             month: this.metricsMonth,
-            source: 'meta',
             metrics,
             summary
           })
@@ -492,14 +609,14 @@ function app() {
 
         if (res.ok) {
           await this.loadMetrics();
-          alert('Social metrics saved!');
+          alert('LinkedIn metrics saved!');
         } else {
           alert('Failed to save metrics');
         }
       } catch (e) {
         alert('Error saving metrics: ' + e.message);
       } finally {
-        this.savingMeta = false;
+        this.savingLinkedIn = false;
       }
     },
 
@@ -892,6 +1009,15 @@ function app() {
         'done': 'Done'
       };
       return labels[status] || status;
+    },
+
+    // Format a number with locale formatting
+    formatNumber(value) {
+      if (value === null || value === undefined) return '—';
+      if (typeof value === 'number') {
+        return value.toLocaleString();
+      }
+      return value;
     },
 
     // Format metric value

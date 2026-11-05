@@ -32,3 +32,4 @@ dist/
 
 # Exports (generated CSV files)
 exports/
+test-results/

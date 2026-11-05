@@ -914,68 +914,125 @@
             <button class="tab" :class="{ active: reportTab === 'social' }" @click="reportTab = 'social'">Social Reporting</button>
           </div>
 
-          <!-- Social Reporting - Admin form or metrics display -->
+          <!-- Social Reporting - Platform cards with LinkedIn admin form -->
           <template x-if="reportTab === 'social'">
             <div class="flex-col gap-lg">
-              <!-- Admin Form -->
+              <!-- LinkedIn Admin Form (manual entry) -->
               <template x-if="isAdmin">
                 <div class="card" style="padding: 24px;">
-                  <h3 style="margin: 0 0 16px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;">Enter Social Metrics for <span x-text="formatMonth(metricsMonth)"></span></h3>
+                  <h3 style="margin: 0 0 16px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;">Enter LinkedIn Metrics for <span x-text="formatMonth(metricsMonth)"></span></h3>
                   <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px;">
                     <div>
-                      <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Reach</label>
-                      <input type="number" x-model="metaForm.reach" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                      <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Impressions</label>
+                      <input type="number" x-model="linkedinForm.impressions" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
                     </div>
                     <div>
                       <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Engagement</label>
-                      <input type="number" x-model="metaForm.engagement" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                      <input type="number" x-model="linkedinForm.engagement" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
                     </div>
                     <div>
                       <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">New Followers</label>
-                      <input type="number" x-model="metaForm.new_followers" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                      <input type="number" x-model="linkedinForm.new_followers" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
                     </div>
                     <div>
                       <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Posts Published</label>
-                      <input type="number" x-model="metaForm.posts_published" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                      <input type="number" x-model="linkedinForm.posts_published" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
                     </div>
                   </div>
                   <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600;">Summary Bullets (3 short highlights)</h4>
                   <div class="flex-col gap-sm" style="margin-bottom: 16px;">
-                    <input type="text" x-model="metaForm.summary1" placeholder="First highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
-                    <input type="text" x-model="metaForm.summary2" placeholder="Second highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
-                    <input type="text" x-model="metaForm.summary3" placeholder="Third highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    <input type="text" x-model="linkedinForm.summary1" placeholder="First highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    <input type="text" x-model="linkedinForm.summary2" placeholder="Second highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                    <input type="text" x-model="linkedinForm.summary3" placeholder="Third highlight..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
                   </div>
-                  <button @click="saveMetaMetrics()" class="btn btn-primary" :disabled="savingMeta" x-text="savingMeta ? 'Saving...' : 'Save Social Metrics'"></button>
+                  <button @click="saveLinkedInMetrics()" class="btn btn-primary" :disabled="savingLinkedIn" x-text="savingLinkedIn ? 'Saving...' : 'Save LinkedIn Metrics'"></button>
                 </div>
               </template>
 
-              <!-- Non-admin: Show metrics if data exists, else empty state -->
-              <template x-if="!isAdmin && (!metrics.meta || Object.keys(metrics.meta).length === 0)">
+              <!-- Empty state when no platform has data -->
+              <template x-if="!hasSocialData">
                 <div class="card" style="padding: 48px 24px; text-align: center;">
                   <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-                  <h3 style="margin: 0 0 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px;">Facebook + Instagram reporting is being connected.</h3>
+                  <h3 style="margin: 0 0 8px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px;">Social reporting is being connected.</h3>
                   <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Numbers start next month.</p>
                 </div>
               </template>
 
-              <!-- Show metrics if data exists -->
-              <template x-if="metrics.meta && Object.keys(metrics.meta).length > 0">
-                <div class="flex-col gap-lg">
-                  <div class="summary-box" x-show="currentSummary.length > 0">
-                    <span class="summary-box-label">THE SHORT VERSION</span>
-                    <template x-for="line in currentSummary" :key="line">
-                      <span class="summary-box-item">→ <span x-text="line"></span></span>
-                    </template>
+              <!-- Combined totals row -->
+              <template x-if="hasSocialData">
+                <div class="card" style="padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                  <p style="margin: 0 0 12px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">All platforms (a person who sees more than one platform counts once per platform)</p>
+                  <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px;">
+                    <div>
+                      <span style="font-size: 12px; color: var(--text-muted); display: block;">Reach/Impressions</span>
+                      <span style="font-size: 24px; font-weight: 700;" x-text="combinedSocialMetrics.reach.formattedValue || '—'"></span>
+                      <span class="stat-note" x-show="combinedSocialMetrics.reach.change" :class="combinedSocialMetrics.reach.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(combinedSocialMetrics.reach.change)"></span>
+                    </div>
+                    <div>
+                      <span style="font-size: 12px; color: var(--text-muted); display: block;">Engagement</span>
+                      <span style="font-size: 24px; font-weight: 700;" x-text="combinedSocialMetrics.engagement.formattedValue || '—'"></span>
+                      <span class="stat-note" x-show="combinedSocialMetrics.engagement.change" :class="combinedSocialMetrics.engagement.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(combinedSocialMetrics.engagement.change)"></span>
+                    </div>
+                    <div>
+                      <span style="font-size: 12px; color: var(--text-muted); display: block;">New Followers</span>
+                      <span style="font-size: 24px; font-weight: 700;" x-text="combinedSocialMetrics.new_followers.formattedValue || '—'"></span>
+                      <span class="stat-note" x-show="combinedSocialMetrics.new_followers.change" :class="combinedSocialMetrics.new_followers.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(combinedSocialMetrics.new_followers.change)"></span>
+                    </div>
+                    <div>
+                      <span style="font-size: 12px; color: var(--text-muted); display: block;">Posts Published</span>
+                      <span style="font-size: 24px; font-weight: 700;" x-text="combinedSocialMetrics.posts_published.formattedValue || '—'"></span>
+                      <span class="stat-note" x-show="combinedSocialMetrics.posts_published.change" :class="combinedSocialMetrics.posts_published.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(combinedSocialMetrics.posts_published.change)"></span>
+                    </div>
                   </div>
-                  <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                    <template x-for="metric in currentMetrics" :key="metric.key">
-                      <div class="stat-card">
-                        <span class="stat-label" x-text="metric.label"></span>
-                        <span class="stat-value" style="font-size: 30px;" x-text="metric.value || '—'"></span>
-                        <span class="stat-note" x-show="metric.change" :class="metric.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(metric.change)"></span>
+                </div>
+              </template>
+
+              <!-- Platform cards -->
+              <template x-if="hasSocialData">
+                <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                  <template x-for="platform in socialPlatforms" :key="platform.key">
+                    <div class="card" style="padding: 20px;">
+                      <h4 style="margin: 0 0 16px 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 16px;" x-text="platform.name"></h4>
+
+                      <!-- Summary bullets if available -->
+                      <template x-if="platform.summary.length > 0">
+                        <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-muted); border-radius: 8px;">
+                          <template x-for="line in platform.summary" :key="line">
+                            <p style="margin: 0 0 4px 0; font-size: 13px; color: var(--text-secondary);">→ <span x-text="line"></span></p>
+                          </template>
+                        </div>
+                      </template>
+
+                      <!-- Metrics grid -->
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                          <span style="font-size: 11px; color: var(--text-muted); display: block;" x-text="platform.firstMetricLabel"></span>
+                          <span style="font-size: 20px; font-weight: 700;" x-text="platform.metrics.reach.formattedValue || '—'"></span>
+                          <span class="stat-note" x-show="platform.metrics.reach.change" :class="platform.metrics.reach.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(platform.metrics.reach.change)" style="font-size: 11px;"></span>
+                        </div>
+                        <div>
+                          <span style="font-size: 11px; color: var(--text-muted); display: block;">Engagement</span>
+                          <span style="font-size: 20px; font-weight: 700;" x-text="platform.metrics.engagement.formattedValue || '—'"></span>
+                          <span class="stat-note" x-show="platform.metrics.engagement.change" :class="platform.metrics.engagement.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(platform.metrics.engagement.change)" style="font-size: 11px;"></span>
+                        </div>
+                        <div>
+                          <span style="font-size: 11px; color: var(--text-muted); display: block;">New Followers</span>
+                          <span style="font-size: 20px; font-weight: 700;" x-text="platform.metrics.new_followers.formattedValue || '—'"></span>
+                          <span class="stat-note" x-show="platform.metrics.new_followers.change" :class="platform.metrics.new_followers.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(platform.metrics.new_followers.change)" style="font-size: 11px;"></span>
+                        </div>
+                        <div>
+                          <span style="font-size: 11px; color: var(--text-muted); display: block;">Posts</span>
+                          <span style="font-size: 20px; font-weight: 700;" x-text="platform.metrics.posts_published.formattedValue || '—'"></span>
+                          <span class="stat-note" x-show="platform.metrics.posts_published.change" :class="platform.metrics.posts_published.change?.improved ? 'text-success' : 'text-muted'" x-text="formatChange(platform.metrics.posts_published.change)" style="font-size: 11px;"></span>
+                        </div>
                       </div>
-                    </template>
-                  </div>
+
+                      <!-- No data indicator -->
+                      <template x-if="!platform.hasData">
+                        <p style="margin: 12px 0 0 0; font-size: 12px; color: var(--text-muted); font-style: italic;">No data for this month yet.</p>
+                      </template>
+                    </div>
+                  </template>
                 </div>
               </template>
             </div>
