@@ -1,5 +1,6 @@
 // POST /api/ingest/reengagement - Import CRU_Reengagement_Master.csv
 // Groups by email, assigns status based on rules
+// ?preview=true returns counts without inserting
 
 interface Env {
   DB: D1Database;
@@ -37,6 +38,7 @@ interface GroupedContact {
   rawRows: CSVRow[];
   status: string;
   statusReason: string;
+  badge: string;
   isBiloholding: boolean;
 }
 
@@ -85,37 +87,79 @@ function getEmailVersion(segment: string): string {
   }
 }
 
-function determineStatus(row: CSVRow): { status: string; reason: string } {
+// Holds that mean we can't send
+const CANT_SEND_HOLDS = [
+  'outside service area',
+  'billing inbox',
+  'unknown contact',
+  'corporate, not local',
+  'corporate not local',
+  'not a primary email',
+  'duplicate org',
+  'jess removed'
+];
+
+function determineStatus(row: CSVRow, isBiloholding: boolean): { status: string; reason: string; badge: string } {
   const campaign1 = row['Campaign 1 (Sept)'] || '';
-  const round2 = row['Round 2 (Nov)'] || '';
+  const round2 = (row['Round 2 (Nov)'] || '').toLowerCase();
   const contacted = row['Contacted'] === 'Yes';
 
   // Campaign 1 bounces → Can't email
   if (campaign1.includes('Bounced')) {
-    return { status: 'cant_email', reason: 'Campaign 1 bounce' };
+    return { status: 'cant_email', reason: 'Campaign 1 bounce', badge: '' };
   }
 
-  // Already contacted → Already contacted tab
+  // Biloholding → To review with badge (don't auto-assign)
+  if (isBiloholding) {
+    return { status: 'to_review', reason: '', badge: 'Check before approving' };
+  }
+
+  // Scheduled – Round 2 (Nov 5) → Already contacted
+  if (round2.includes('scheduled')) {
+    return { status: 'already_contacted', reason: 'Scheduled - Round 2 (Nov 5)', badge: 'Sent Nov 5' };
+  }
+
+  // Already contacted (Contacted = Yes) → Already contacted
   if (contacted) {
-    return { status: 'already_contacted', reason: 'Marked as contacted' };
+    return { status: 'already_contacted', reason: 'Marked as contacted', badge: '' };
   }
 
-  // Any hold status → Not now
-  if (round2.includes('Held')) {
-    return { status: 'not_now', reason: round2 };
-  }
+  // Check held statuses
+  if (round2.includes('held')) {
+    // Holds that mean we can't send → Can't email
+    for (const cantSend of CANT_SEND_HOLDS) {
+      if (round2.includes(cantSend)) {
+        return { status: 'cant_email', reason: row['Round 2 (Nov)'], badge: '' };
+      }
+    }
 
-  // Scheduled for Round 2 → Approved
-  if (round2.includes('Scheduled')) {
-    return { status: 'approved', reason: round2 };
+    // "Held – warm tier" → To review with badge
+    if (round2.includes('warm tier') || round2.includes('warm-tier')) {
+      return { status: 'to_review', reason: row['Round 2 (Nov)'], badge: 'Warm-tier email' };
+    }
+
+    // "Held – needs Jonathan" → To review with badge
+    if (round2.includes('needs jonathan')) {
+      return { status: 'to_review', reason: row['Round 2 (Nov)'], badge: 'Your call' };
+    }
+
+    // "Held - already got Campaign 1" → Can't email (they were already sent Campaign 1)
+    if (round2.includes('already got campaign 1')) {
+      return { status: 'cant_email', reason: row['Round 2 (Nov)'], badge: '' };
+    }
+
+    // Any other hold → Can't email (safer default)
+    return { status: 'cant_email', reason: row['Round 2 (Nov)'], badge: '' };
   }
 
   // Default → To review
-  return { status: 'to_review', reason: '' };
+  return { status: 'to_review', reason: '', badge: '' };
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
+  const url = new URL(request.url);
+  const isPreview = url.searchParams.get('preview') === 'true';
 
   try {
     const text = await request.text();
@@ -125,16 +169,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Group by email (case-insensitive)
     const grouped = new Map<string, GroupedContact>();
+    let skipped = 0;
 
     for (const row of rows) {
       const email = row['Email']?.trim();
       if (!email) {
+        skipped++;
         continue; // Skip rows with no email
       }
 
       const emailLower = email.toLowerCase();
-      const { status, reason } = determineStatus(row);
       const isBiloholding = emailLower.includes('bilohol');
+      const { status, reason, badge } = determineStatus(row, isBiloholding);
 
       if (grouped.has(emailLower)) {
         // Add to existing group
@@ -147,12 +193,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           existing.lastInvoiceDate = row['Last Invoice Date'];
         }
 
-        // Aggregate status - prioritize cant_email > already_contacted > not_now > approved > to_review
+        // Keep phone if we don't have one
+        if (!existing.phone && row['Phone']) {
+          existing.phone = row['Phone'];
+        }
+
+        // Aggregate status - prioritize cant_email > already_contacted > to_review
+        // Note: not_now is only for Jonathan's manual picks, not from import
         const statusPriority: Record<string, number> = {
-          cant_email: 5,
-          already_contacted: 4,
-          not_now: 3,
-          approved: 2,
+          cant_email: 3,
+          already_contacted: 2,
           to_review: 1
         };
         if (statusPriority[status] > statusPriority[existing.status]) {
@@ -163,6 +213,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         // Keep biloholding flag if any row has it
         if (isBiloholding) {
           existing.isBiloholding = true;
+          existing.badge = 'Check before approving';
+        }
+
+        // Keep badge if we have one
+        if (badge && !existing.badge) {
+          existing.badge = badge;
         }
       } else {
         // Create new group
@@ -183,28 +239,125 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           rawRows: [row],
           status,
           statusReason: reason,
+          badge,
           isBiloholding
         });
       }
     }
 
-    console.log(`[reengagement] Grouped into ${grouped.size} unique emails`);
+    console.log(`[reengagement] Grouped into ${grouped.size} unique emails, skipped ${skipped}`);
 
-    // Clear existing data and insert new
+    // Count by status for preview
+    const statusCounts: Record<string, number> = {
+      to_review: 0,
+      approved: 0,
+      not_now: 0,
+      already_contacted: 0,
+      cant_email: 0
+    };
+    let biloholdingCount = 0;
+
+    for (const contact of grouped.values()) {
+      statusCounts[contact.status] = (statusCounts[contact.status] || 0) + 1;
+      if (contact.isBiloholding) biloholdingCount++;
+    }
+
+    // Load existing decisions from old clients table (needed for both preview and import)
+    const oldDecisions = new Map<string, { decision: string; do_not_send: number; hold: number }>();
+    let oldClientsCount = 0;
+    try {
+      const oldClientsResult = await env.DB.prepare(`
+        SELECT c.email, cs.decision, c.do_not_send, c.hold
+        FROM clients c
+        LEFT JOIN campaign_selections cs ON c.id = cs.client_id
+        WHERE c.email IS NOT NULL AND c.email != ''
+      `).all();
+
+      for (const row of oldClientsResult.results as { email: string; decision: string; do_not_send: number; hold: number }[]) {
+        if (row.email) {
+          const emailLower = row.email.toLowerCase();
+          // Keep the most restrictive decision
+          const existing = oldDecisions.get(emailLower);
+          if (!existing || (row.do_not_send && !existing.do_not_send) || (row.hold && !existing.hold)) {
+            oldDecisions.set(emailLower, row);
+          }
+        }
+      }
+      oldClientsCount = oldDecisions.size;
+      console.log(`[reengagement] Loaded ${oldDecisions.size} existing decisions`);
+    } catch (e) {
+      console.log('[reengagement] No existing clients table or decisions');
+    }
+
+    // Count how many will have decisions carried over
+    let decisionsToCarryOver = 0;
+    for (const contact of grouped.values()) {
+      const emailLower = contact.email.toLowerCase();
+      const oldData = oldDecisions.get(emailLower);
+      if (oldData && (oldData.decision || oldData.do_not_send || oldData.hold)) {
+        decisionsToCarryOver++;
+      }
+    }
+
+    // If preview mode, return counts without inserting
+    if (isPreview) {
+      return new Response(JSON.stringify({
+        preview: true,
+        totalRows: rows.length,
+        skipped,
+        uniqueEmails: grouped.size,
+        statusCounts,
+        biloholdingFlagged: biloholdingCount,
+        oldClientsFound: oldClientsCount,
+        decisionsToCarryOver,
+        message: `Preview: ${skipped} skipped (no email), ${grouped.size} unique emails. Tab breakdown: To review: ${statusCounts.to_review}, Already contacted: ${statusCounts.already_contacted}, Can't email: ${statusCounts.cant_email}. Biloholding entries: ${biloholdingCount} (placed in To review with badge). Old decisions to carry over: ${decisionsToCarryOver}.`
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Archive old tables
+    try {
+      await env.DB.prepare(`INSERT INTO clients_archive SELECT * FROM clients`).run();
+      await env.DB.prepare(`INSERT INTO campaign_selections_archive SELECT * FROM campaign_selections`).run();
+      console.log('[reengagement] Archived old clients and selections');
+    } catch (e) {
+      console.log('[reengagement] Could not archive (tables may not exist)');
+    }
+
+    // Clear existing reengagement data and insert new
     await env.DB.prepare('DELETE FROM reengagement_contacts').run();
 
     let inserted = 0;
+    let decisionsCarriedOver = 0;
+
     const insertStmt = env.DB.prepare(`
       INSERT INTO reengagement_contacts (
         email, client_names, phone, job_type, last_invoice_date,
-        segment, email_version, status, status_reason,
+        segment, email_version, status, status_reason, badge,
         campaign1_status, campaign1_sent, round2_status, round2_note,
+        old_decision, do_not_send, hold,
         contacted, source, rows_sharing_email, raw_rows, is_biloholding
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const contact of grouped.values()) {
       const campaign1Sent = contact.campaign1Status ? 1 : 0;
+      const emailLower = contact.email.toLowerCase();
+      const oldData = oldDecisions.get(emailLower);
+
+      let oldDecision = '';
+      let doNotSend = 0;
+      let hold = 0;
+
+      if (oldData) {
+        oldDecision = oldData.decision || '';
+        doNotSend = oldData.do_not_send || 0;
+        hold = oldData.hold || 0;
+        if (oldDecision || doNotSend || hold) {
+          decisionsCarriedOver++;
+        }
+      }
 
       await insertStmt.bind(
         contact.email,
@@ -216,10 +369,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         contact.emailVersion,
         contact.status,
         contact.statusReason,
+        contact.badge,
         contact.campaign1Status,
         campaign1Sent,
         contact.round2Status,
         contact.round2Note,
+        oldDecision,
+        doNotSend,
+        hold,
         contact.contacted ? 1 : 0,
         contact.source,
         contact.rawRows.length,
@@ -229,27 +386,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       inserted++;
     }
 
-    // Count by status
-    const counts = await env.DB.prepare(`
-      SELECT status, COUNT(*) as count FROM reengagement_contacts GROUP BY status
-    `).all();
-
-    const statusCounts: Record<string, number> = {};
-    for (const row of counts.results as { status: string; count: number }[]) {
-      statusCounts[row.status] = row.count;
-    }
-
-    // Count biloholding
-    const biloholdingCount = await env.DB.prepare(`
-      SELECT COUNT(*) as count FROM reengagement_contacts WHERE is_biloholding = 1
-    `).first<{ count: number }>();
-
     return new Response(JSON.stringify({
       success: true,
       imported: inserted,
-      skipped: rows.length - Array.from(grouped.values()).reduce((sum, g) => sum + g.rawRows.length, 0),
+      skipped,
       statusCounts,
-      biloholdingFlagged: biloholdingCount?.count || 0
+      biloholdingFlagged: biloholdingCount,
+      decisionsCarriedOver,
+      message: `Imported ${inserted} contacts. ${skipped} rows skipped (no email). ${decisionsCarriedOver} decisions carried over from previous data.`
     }), {
       headers: { 'Content-Type': 'application/json' }
     });

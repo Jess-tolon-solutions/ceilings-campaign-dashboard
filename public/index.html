@@ -607,11 +607,11 @@
             </div>
           </div>
 
-          <!-- Campaign Results Card -->
+          <!-- Round 1 Results Card -->
           <div class="card card-elevated" style="padding: 0; overflow: hidden;">
             <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
               <div>
-                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;">Campaign Results</h2>
+                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;">Round 1 Results</h2>
                 <span style="font-size: 13px; color: var(--text-muted);">Sent September 2026</span>
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -620,32 +620,153 @@
                 <span class="badge badge-neutral">Dormant: <span x-text="reengagement.segmentCounts.dormant"></span></span>
               </div>
             </div>
+            <!-- Main metrics -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1px; background: var(--border-light);">
               <div style="background: white; padding: 16px; text-align: center;">
                 <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Sent</div>
-                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.sent || '—'"></div>
-              </div>
-              <div style="background: white; padding: 16px; text-align: center;">
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Delivered</div>
-                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.delivered || '—'"></div>
-              </div>
-              <div style="background: white; padding: 16px; text-align: center;">
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Opened</div>
-                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.opened || '—'"></div>
-              </div>
-              <div style="background: white; padding: 16px; text-align: center;">
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Clicked</div>
-                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.clicked || '—'"></div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="round1Results.sent"></div>
               </div>
               <div style="background: white; padding: 16px; text-align: center;">
                 <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Bounced</div>
-                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #b0592a;" x-text="emailResults[1]?.bounced || '—'"></div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #b0592a;">
+                  <span x-text="round1Results.bounced"></span>
+                  <span style="font-size: 14px; font-weight: 500;"> (18%)</span>
+                </div>
               </div>
               <div style="background: white; padding: 16px; text-align: center;">
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Booked jobs</div>
-                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #2e7d4f;" x-text="emailResults[1]?.booked_jobs || '—'"></div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Delivered</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="round1Results.delivered"></div>
+              </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Opened</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);">
+                  <span x-text="round1Results.opened"></span>
+                  <span style="font-size: 14px; font-weight: 500;"> (29.6%)</span>
+                </div>
+                <div style="font-size: 11px; color: #2e7d4f; margin-top: 2px;">Above 20% benchmark</div>
+              </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Human clicks</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="round1Results.clicked"></div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Jobber reports 10; 9 were security scanners</div>
               </div>
             </div>
+            <!-- Bounce list -->
+            <div style="padding: 14px 22px; border-top: 1px solid var(--border-light); font-size: 13px; color: var(--text-secondary);">
+              <strong style="color: #b0592a;">Bounces:</strong> <span x-text="round1Results.bounce_list"></span>
+            </div>
+            <!-- Admin-editable results -->
+            <template x-if="isAdmin">
+              <div style="padding: 18px 22px; border-top: 1px solid var(--border-light); background: #fafbfc;">
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Track Results (Admin)</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px;">
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Replies</label>
+                    <input type="number" min="0" x-model="round1Results.replies" @change="saveRound1Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Calls mentioning CRU25</label>
+                    <input type="number" min="0" x-model="round1Results.calls_mentioning_cru25" @change="saveRound1Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Booked jobs</label>
+                    <input type="number" min="0" x-model="round1Results.booked_jobs" @change="saveRound1Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Revenue ($)</label>
+                    <input type="number" min="0" x-model="round1Results.revenue" @change="saveRound1Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Round 2 Results Card (admin-editable) -->
+          <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+            <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light);">
+              <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;">Round 2 Results</h2>
+              <span style="font-size: 13px; color: var(--text-muted);">Sent November 5, 2026 to 12 contacts</span>
+            </div>
+            <!-- Main metrics (all admin-editable) -->
+            <template x-if="isAdmin">
+              <div style="padding: 18px 22px; background: #fafbfc;">
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Enter Jobber Numbers</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Sent</label>
+                    <input type="number" min="0" x-model="round2Results.sent" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Bounced</label>
+                    <input type="number" min="0" x-model="round2Results.bounced" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Delivered</label>
+                    <input type="number" min="0" x-model="round2Results.delivered" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Opened</label>
+                    <input type="number" min="0" x-model="round2Results.opened" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Human clicks</label>
+                    <input type="number" min="0" x-model="round2Results.clicked" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Jobber clicks</label>
+                    <input type="number" min="0" x-model="round2Results.link_scanner_clicks" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                  <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Bounce list (company names)</label>
+                  <input type="text" x-model="round2Results.bounce_list" @change="saveRound2Results()" placeholder="e.g. Company A, Company B" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Track Results</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px;">
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Replies</label>
+                    <input type="number" min="0" x-model="round2Results.replies" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Calls mentioning CRU25</label>
+                    <input type="number" min="0" x-model="round2Results.calls_mentioning_cru25" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Booked jobs</label>
+                    <input type="number" min="0" x-model="round2Results.booked_jobs" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Revenue ($)</label>
+                    <input type="number" min="0" x-model="round2Results.revenue" @change="saveRound2Results()" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-light); border-radius: 8px;">
+                  </div>
+                </div>
+              </div>
+            </template>
+            <!-- Read-only view for non-admins -->
+            <template x-if="!isAdmin">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1px; background: var(--border-light);">
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Sent</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="round2Results.sent || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Bounced</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #b0592a;" x-text="round2Results.bounced || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Delivered</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="round2Results.delivered || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Opened</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="round2Results.opened || '—'"></div>
+                </div>
+                <div style="background: white; padding: 16px; text-align: center;">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Human clicks</div>
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="round2Results.clicked || '—'"></div>
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- 5-Tab Navigation -->
@@ -677,9 +798,22 @@
             </template>
           </div>
 
-          <!-- Search -->
-          <div class="search-filters">
-            <input type="search" class="search-input" placeholder="Search email or company name" x-model="reengagementSearch">
+          <!-- Search + Filters -->
+          <div class="search-filters" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+            <input type="search" class="search-input" placeholder="Search email or company name" x-model="reengagementSearch" style="flex: 1; min-width: 200px;">
+            <!-- Segment filter (To review tab only) -->
+            <template x-if="reengagementTab === 'to_review'">
+              <button class="btn btn-secondary" @click="toggleReengagementSegmentFilter()" style="font-size: 13px; padding: 8px 14px;">
+                <span x-text="reengagementSegmentFilter || 'All segments'"></span>
+                <span style="margin-left: 4px;">&#9662;</span>
+              </button>
+            </template>
+            <!-- Admin export button (Approved tab only) -->
+            <template x-if="isAdmin && reengagementTab === 'approved' && reengagement.counts.approved > 0">
+              <button class="btn btn-primary" @click="lockReengagementRound()" style="font-size: 13px; padding: 8px 14px;">
+                Export for Jobber (<span x-text="reengagement.counts.approved"></span>)
+              </button>
+            </template>
             <span style="font-size: 13px; color: var(--text-muted);" x-text="filteredReengagementContacts.length + ' contacts'"></span>
           </div>
 
@@ -694,16 +828,42 @@
                   <div class="client-details" style="flex: 1;">
                     <div class="client-name-row" style="flex-wrap: wrap; gap: 6px;">
                       <span class="client-company" x-text="contact.email" style="font-size: 14px;"></span>
-                      <span class="badge" :class="getSegmentBadgeClass(contact.email_version)" style="font-size: 10px; padding: 2px 6px;" x-text="getSegmentLabel(contact.email_version)"></span>
+                      <span class="badge" :class="getSegmentBadgeClass(contact.email_version)" style="font-size: 10px; padding: 2px 6px;" x-text="contact.segment || getSegmentLabel(contact.email_version)"></span>
                       <span class="badge badge-info" x-show="contact.rows_sharing_email > 1" style="font-size: 10px; padding: 2px 6px;" x-text="contact.rows_sharing_email + ' locations'"></span>
-                      <span class="badge badge-danger" x-show="contact.is_biloholding" style="font-size: 10px; padding: 2px 6px;">biloholding</span>
+                      <!-- Badge from status rules -->
+                      <template x-if="contact.badge">
+                        <span class="badge" :class="contact.badge === 'Check before approving' ? 'badge-danger' : (contact.badge === 'Sent Nov 5' ? 'badge-info' : 'badge-warning')" style="font-size: 10px; padding: 2px 6px;" x-text="contact.badge"></span>
+                      </template>
                     </div>
                     <span class="client-meta" style="font-size: 12px;" x-text="formatClientNames(contact.client_names)"></span>
-                    <template x-if="contact.status_reason">
-                      <span style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" x-text="contact.status_reason"></span>
+                    <!-- Phone -->
+                    <template x-if="contact.phone">
+                      <span style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        <span style="color: var(--text-muted);">Phone:</span> <span x-text="contact.phone"></span>
+                      </span>
                     </template>
+                    <!-- Last Invoice Date -->
+                    <template x-if="contact.last_invoice_date">
+                      <span style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                        Last invoice: <span x-text="formatDate(contact.last_invoice_date)"></span>
+                      </span>
+                    </template>
+                    <!-- Campaign 1 result -->
                     <template x-if="contact.campaign1_status">
                       <span style="font-size: 11px; color: #8a5a00; margin-top: 2px;">Campaign 1: <span x-text="contact.campaign1_status"></span></span>
+                    </template>
+                    <!-- Round 2 status + note -->
+                    <template x-if="contact.round2_status">
+                      <span style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                        Round 2: <span x-text="contact.round2_status"></span>
+                        <template x-if="contact.round2_note">
+                          <span> &mdash; <span x-text="contact.round2_note"></span></span>
+                        </template>
+                      </span>
+                    </template>
+                    <!-- Status reason (if different from round2_status) -->
+                    <template x-if="contact.status_reason && contact.status_reason !== contact.round2_status">
+                      <span style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" x-text="contact.status_reason"></span>
                     </template>
                   </div>
                 </div>

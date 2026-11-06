@@ -101,6 +101,34 @@ function app() {
     },
     reengagementTab: 'to_review',
     reengagementSearch: '',
+    reengagementSegmentFilter: '',
+    round1Results: {
+      sent: 33,
+      bounced: 6,
+      delivered: 27,
+      opened: 8,
+      clicked: 1,
+      link_scanner_clicks: 9,
+      bounce_list: 'Red Lobster/Darden, Brio, Broward Health, Lincoln Tech, Better Spaces, Starboard',
+      replies: 0,
+      calls_mentioning_cru25: 0,
+      booked_jobs: 0,
+      revenue: 0
+    },
+    round2Results: {
+      sent: 12,
+      bounced: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      link_scanner_clicks: 0,
+      bounce_list: '',
+      replies: 0,
+      calls_mentioning_cru25: 0,
+      booked_jobs: 0,
+      revenue: 0
+    },
+    savingResults: false,
 
     // Stats (computed from data)
     stats: {
@@ -729,16 +757,56 @@ function app() {
     },
 
     // Load reengagement data
-    async loadReengagement(status = null) {
+    async loadReengagement(status = null, segment = null) {
       try {
         const tab = status || this.reengagementTab;
-        const res = await fetch(`/api/reengagement?status=${tab}`);
+        const seg = segment !== null ? segment : this.reengagementSegmentFilter;
+        let url = `/api/reengagement?status=${tab}`;
+        if (seg) url += `&segment=${encodeURIComponent(seg)}`;
+
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           this.reengagement.counts = data.counts || this.reengagement.counts;
           this.reengagement.segmentCounts = data.segmentCounts || this.reengagement.segmentCounts;
           this.reengagement.contacts = data.contacts || [];
           this.reengagement.campaignResults = data.campaignResults || [];
+
+          // Load Round 1 results from database
+          const r1 = data.campaignResults?.find(r => r.campaign_name === 'Round 1');
+          if (r1) {
+            this.round1Results = {
+              sent: r1.sent || 33,
+              bounced: r1.bounced || 6,
+              delivered: r1.delivered || 27,
+              opened: r1.opened || 8,
+              clicked: r1.clicked || 1,
+              link_scanner_clicks: r1.link_scanner_clicks || 9,
+              bounce_list: r1.bounce_list || 'Red Lobster/Darden, Brio, Broward Health, Lincoln Tech, Better Spaces, Starboard',
+              replies: r1.replies || 0,
+              calls_mentioning_cru25: r1.calls_mentioning_cru25 || 0,
+              booked_jobs: r1.booked_jobs || 0,
+              revenue: r1.revenue || 0
+            };
+          }
+
+          // Load Round 2 results from database
+          const r2 = data.campaignResults?.find(r => r.campaign_name === 'Round 2');
+          if (r2) {
+            this.round2Results = {
+              sent: r2.sent || 12,
+              bounced: r2.bounced || 0,
+              delivered: r2.delivered || 0,
+              opened: r2.opened || 0,
+              clicked: r2.clicked || 0,
+              link_scanner_clicks: r2.link_scanner_clicks || 0,
+              bounce_list: r2.bounce_list || '',
+              replies: r2.replies || 0,
+              calls_mentioning_cru25: r2.calls_mentioning_cru25 || 0,
+              booked_jobs: r2.booked_jobs || 0,
+              revenue: r2.revenue || 0
+            };
+          }
         }
       } catch (e) {
         console.log('Reengagement data not available yet');
@@ -749,7 +817,22 @@ function app() {
     async changeReengagementTab(tab) {
       this.reengagementTab = tab;
       this.reengagementSearch = '';
+      this.reengagementSegmentFilter = '';
       await this.loadReengagement(tab);
+    },
+
+    // Change segment filter
+    async changeReengagementSegment(segment) {
+      this.reengagementSegmentFilter = segment;
+      await this.loadReengagement(this.reengagementTab, segment);
+    },
+
+    // Toggle segment filter
+    toggleReengagementSegmentFilter() {
+      const segments = ['', 'Last 12 Months', '1-3 Years', '3+ Years'];
+      const idx = segments.indexOf(this.reengagementSegmentFilter);
+      this.reengagementSegmentFilter = segments[(idx + 1) % segments.length];
+      this.loadReengagement();
     },
 
     // Update reengagement contact status
@@ -780,6 +863,101 @@ function app() {
       }
     },
 
+    // Save Round 1 results (admin)
+    async saveRound1Results() {
+      if (!this.isAdmin) return;
+      this.savingResults = true;
+
+      try {
+        const res = await fetch('/api/reengagement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_results',
+            campaign_name: 'Round 1',
+            replies: parseInt(this.round1Results.replies) || 0,
+            calls_mentioning_cru25: parseInt(this.round1Results.calls_mentioning_cru25) || 0,
+            booked_jobs: parseInt(this.round1Results.booked_jobs) || 0,
+            revenue: parseFloat(this.round1Results.revenue) || 0
+          })
+        });
+
+        if (!res.ok) {
+          console.error('Failed to save Round 1 results');
+        }
+      } catch (e) {
+        console.error('Error saving Round 1 results:', e);
+      } finally {
+        this.savingResults = false;
+      }
+    },
+
+    // Save Round 2 results (admin - all fields editable)
+    async saveRound2Results() {
+      if (!this.isAdmin) return;
+      this.savingResults = true;
+
+      try {
+        const res = await fetch('/api/reengagement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_results',
+            campaign_name: 'Round 2',
+            sent: parseInt(this.round2Results.sent) || 0,
+            bounced: parseInt(this.round2Results.bounced) || 0,
+            delivered: parseInt(this.round2Results.delivered) || 0,
+            opened: parseInt(this.round2Results.opened) || 0,
+            clicked: parseInt(this.round2Results.clicked) || 0,
+            link_scanner_clicks: parseInt(this.round2Results.link_scanner_clicks) || 0,
+            bounce_list: this.round2Results.bounce_list || '',
+            replies: parseInt(this.round2Results.replies) || 0,
+            calls_mentioning_cru25: parseInt(this.round2Results.calls_mentioning_cru25) || 0,
+            booked_jobs: parseInt(this.round2Results.booked_jobs) || 0,
+            revenue: parseFloat(this.round2Results.revenue) || 0
+          })
+        });
+
+        if (!res.ok) {
+          console.error('Failed to save Round 2 results');
+        }
+      } catch (e) {
+        console.error('Error saving Round 2 results:', e);
+      } finally {
+        this.savingResults = false;
+      }
+    },
+
+    // Lock round / export approved
+    async lockReengagementRound() {
+      if (!this.isAdmin) return;
+      if (!confirm(`Export ${this.reengagement.counts.approved} approved contacts for Jobber?`)) return;
+
+      try {
+        const res = await fetch('/api/reengagement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'lock' })
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          const blob = new Blob([result.csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = result.filename;
+          a.click();
+          URL.revokeObjectURL(url);
+          alert(`Exported ${result.count} contacts!`);
+        } else {
+          alert('Export failed: ' + (result.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Export failed: ' + e.message);
+      }
+    },
+
     // Get segment badge class
     getSegmentBadgeClass(emailVersion) {
       const classes = {
@@ -806,6 +984,13 @@ function app() {
       if (names.length === 1) return names[0];
       if (names.length <= 3) return names.join(', ');
       return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
+    },
+
+    // Format date for display
+    formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     },
 
     // Select round and reload clients

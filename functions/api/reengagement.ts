@@ -1,5 +1,6 @@
 // GET /api/reengagement - List reengagement contacts with counts
 // PATCH /api/reengagement - Update contact status
+// POST /api/reengagement/lock - Export approved contacts for Jobber
 
 interface Env {
   DB: D1Database;
@@ -15,6 +16,7 @@ export const onRequestGet: PagesFunction<Env, string, Data> = async (context) =>
   const { env, request } = context;
   const url = new URL(request.url);
   const status = url.searchParams.get('status') || 'to_review';
+  const segmentFilter = url.searchParams.get('segment') || '';
 
   try {
     // Get counts for all tabs
@@ -50,24 +52,40 @@ export const onRequestGet: PagesFunction<Env, string, Data> = async (context) =>
       segmentCounts[row.email_version] = row.count;
     }
 
+    // Build query with optional segment filter
+    let whereClause = 'WHERE status = ?';
+    const params: (string | number)[] = [status];
+
+    if (segmentFilter) {
+      whereClause += ' AND segment = ?';
+      params.push(segmentFilter);
+    }
+
+    // Order: Last 12 Months first for To review, then by invoice date
+    const orderClause = `
+      ORDER BY
+        CASE WHEN is_biloholding = 1 THEN 0 ELSE 1 END,
+        CASE segment
+          WHEN 'Last 12 Months' THEN 1
+          WHEN '1-3 Years' THEN 2
+          WHEN '3+ Years' THEN 3
+          ELSE 4
+        END,
+        last_invoice_date DESC
+    `;
+
     // Get contacts for the requested status
     const contactsResult = await env.DB.prepare(`
       SELECT
         id, email, client_names, phone, job_type, last_invoice_date,
-        segment, email_version, status, status_reason,
+        segment, email_version, status, status_reason, badge,
         campaign1_status, round2_status, round2_note,
+        old_decision, do_not_send, hold,
         contacted, admin_note, source, rows_sharing_email, is_biloholding
       FROM reengagement_contacts
-      WHERE status = ?
-      ORDER BY
-        is_biloholding DESC,
-        CASE email_version
-          WHEN 'recent' THEN 1
-          WHEN 'lapsed' THEN 2
-          WHEN 'dormant' THEN 3
-        END,
-        last_invoice_date DESC
-    `).bind(status).all();
+      ${whereClause}
+      ${orderClause}
+    `).bind(...params).all();
 
     // Parse client_names JSON
     const contacts = (contactsResult.results as Record<string, unknown>[]).map(c => ({
@@ -167,7 +185,7 @@ export const onRequestPatch: PagesFunction<Env, string, Data> = async (context) 
   }
 };
 
-// POST /api/reengagement - Bulk update (move multiple contacts)
+// POST /api/reengagement - Lock round / update results
 export const onRequestPost: PagesFunction<Env, string, Data> = async (context) => {
   const { env, request, data } = context;
 
@@ -182,34 +200,126 @@ export const onRequestPost: PagesFunction<Env, string, Data> = async (context) =
 
   try {
     const body = await request.json() as {
-      ids: number[];
-      status: string;
+      action: string;
+      // For lock
+      ids?: number[];
+      // For update_results
+      campaign_name?: string;
+      replies?: number;
+      calls_mentioning_cru25?: number;
+      booked_jobs?: number;
+      revenue?: number;
     };
 
-    if (!body.ids?.length || !body.status) {
-      return new Response(JSON.stringify({ error: 'Missing ids or status' }), {
-        status: 400,
+    if (body.action === 'lock') {
+      // Export approved contacts for Jobber
+      const approvedResult = await env.DB.prepare(`
+        SELECT email, client_names, email_version
+        FROM reengagement_contacts
+        WHERE status = 'approved'
+        ORDER BY email_version, email
+      `).all();
+
+      // Build CSV: email, client_name (one row per client name), email_version
+      const csvRows: string[] = ['Email,Client Name,Email Version'];
+
+      for (const contact of approvedResult.results as { email: string; client_names: string; email_version: string }[]) {
+        const clientNames = JSON.parse(contact.client_names || '[]') as string[];
+        for (const name of clientNames) {
+          // Escape quotes in names
+          const escapedName = name.replace(/"/g, '""');
+          csvRows.push(`"${contact.email}","${escapedName}","${contact.email_version}"`);
+        }
+      }
+
+      const csv = csvRows.join('\n');
+
+      return new Response(JSON.stringify({
+        success: true,
+        csv,
+        count: approvedResult.results.length,
+        filename: `reengagement_approved_${new Date().toISOString().slice(0, 10)}.csv`
+      }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const placeholders = body.ids.map(() => '?').join(',');
-    await env.DB.prepare(`
-      UPDATE reengagement_contacts
-      SET status = ?, updated_at = datetime('now')
-      WHERE id IN (${placeholders})
-    `).bind(body.status, ...body.ids).run();
+    if (body.action === 'update_results') {
+      const updates: string[] = [];
+      const values: (string | number)[] = [];
 
-    return new Response(JSON.stringify({
-      success: true,
-      updated: body.ids.length
-    }), {
+      // Core metrics (for Round 2 admin entry)
+      if (body.sent !== undefined) {
+        updates.push('sent = ?');
+        values.push(body.sent);
+      }
+      if (body.bounced !== undefined) {
+        updates.push('bounced = ?');
+        values.push(body.bounced);
+      }
+      if (body.delivered !== undefined) {
+        updates.push('delivered = ?');
+        values.push(body.delivered);
+      }
+      if (body.opened !== undefined) {
+        updates.push('opened = ?');
+        values.push(body.opened);
+      }
+      if (body.clicked !== undefined) {
+        updates.push('clicked = ?');
+        values.push(body.clicked);
+      }
+      if (body.link_scanner_clicks !== undefined) {
+        updates.push('link_scanner_clicks = ?');
+        values.push(body.link_scanner_clicks);
+      }
+      if (body.bounce_list !== undefined) {
+        updates.push('bounce_list = ?');
+        values.push(body.bounce_list);
+      }
+
+      // Tracking fields
+      if (body.replies !== undefined) {
+        updates.push('replies = ?');
+        values.push(body.replies);
+      }
+      if (body.calls_mentioning_cru25 !== undefined) {
+        updates.push('calls_mentioning_cru25 = ?');
+        values.push(body.calls_mentioning_cru25);
+      }
+      if (body.booked_jobs !== undefined) {
+        updates.push('booked_jobs = ?');
+        values.push(body.booked_jobs);
+      }
+      if (body.revenue !== undefined) {
+        updates.push('revenue = ?');
+        values.push(body.revenue);
+      }
+
+      if (updates.length > 0 && body.campaign_name) {
+        updates.push('updated_at = datetime(\'now\')');
+        values.push(body.campaign_name);
+
+        await env.DB.prepare(`
+          UPDATE reengagement_results
+          SET ${updates.join(', ')}
+          WHERE campaign_name = ?
+        `).bind(...values).run();
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Failed to bulk update:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update' }), {
+    console.error('Failed to process request:', error);
+    return new Response(JSON.stringify({ error: 'Failed to process' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
