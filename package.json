@@ -9,7 +9,8 @@
     "db:migrate:local": "wrangler d1 execute ceilings-db --local --file=./migrations/0001_schema.sql",
     "db:migrate": "wrangler d1 execute ceilings-db --file=./migrations/0001_schema.sql",
     "test": "npx playwright test",
-    "test:social": "npx playwright test tests/social-tab.spec.ts"
+    "test:social": "npx playwright test tests/social-tab.spec.ts",
+    "test:reengagement": "npx playwright test tests/reengagement.spec.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",

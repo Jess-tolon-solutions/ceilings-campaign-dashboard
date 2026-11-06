@@ -56,9 +56,9 @@
         </ul>
       </nav>
 
-      <div class="sidebar-cta" x-show="pendingCount > 0">
+      <div class="sidebar-cta" x-show="reengagement.counts.to_review > 0">
         <span class="sidebar-cta-label">WAITING ON YOU</span>
-        <span class="sidebar-cta-text" x-text="pendingCount + ' contacts to review'"></span>
+        <span class="sidebar-cta-text" x-text="reengagement.counts.to_review + ' contacts to review'"></span>
         <button class="sidebar-cta-btn" @click="currentView = 'reengagement'">Start reviewing</button>
       </div>
 
@@ -117,26 +117,26 @@
             <button class="campaign-card" @click="currentView = 'reengagement'">
               <div class="campaign-card-band email"></div>
               <div class="campaign-card-hero email">
-                <span class="campaign-card-tag">EMAIL · ROUND 3</span>
+                <span class="campaign-card-tag">EMAIL</span>
                 <span class="campaign-card-name">Client Re-engagement</span>
-                <span class="campaign-card-sub">Win back past clients. Rounds 1 and 2 sent in September.</span>
+                <span class="campaign-card-sub">Win back past clients. Three email versions by segment.</span>
               </div>
               <div class="campaign-card-stats">
                 <div class="campaign-card-stat">
-                  <span class="campaign-card-stat-label">Picked so far</span>
-                  <span class="campaign-card-stat-value" x-text="selectionCounts.yes + selectionCounts.no + selectionCounts.later"></span>
+                  <span class="campaign-card-stat-label">Approved</span>
+                  <span class="campaign-card-stat-value" x-text="reengagement.counts.approved"></span>
                 </div>
                 <div class="campaign-card-stat">
-                  <span class="campaign-card-stat-label">Left to review</span>
-                  <span class="campaign-card-stat-value" x-text="selectionCounts.pending"></span>
+                  <span class="campaign-card-stat-label">To review</span>
+                  <span class="campaign-card-stat-value" x-text="reengagement.counts.to_review"></span>
                 </div>
                 <div class="campaign-card-stat">
-                  <span class="campaign-card-stat-label">Opens, round 1</span>
-                  <span class="campaign-card-stat-value">8</span>
+                  <span class="campaign-card-stat-label">Total contacts</span>
+                  <span class="campaign-card-stat-value" x-text="reengagementTotal"></span>
                 </div>
               </div>
               <div class="campaign-card-footer">
-                <span class="badge badge-warning" x-show="selectionCounts.pending > 0">Needs your picks</span>
+                <span class="badge badge-warning" x-show="reengagement.counts.to_review > 0" x-text="reengagement.counts.to_review + ' to review'"></span>
                 <span class="campaign-card-link">Open campaign →</span>
               </div>
             </button>
@@ -544,26 +544,26 @@
             <!-- Re-engagement Card -->
             <button class="campaign-card" @click="currentView = 'reengagement'">
               <div class="campaign-card-hero email" style="border-radius: 20px 20px 0 0;">
-                <span class="campaign-card-tag">EMAIL · ROUND 3</span>
+                <span class="campaign-card-tag">EMAIL</span>
                 <span class="campaign-card-name">Client Re-engagement</span>
-                <span class="campaign-card-sub">Win back past clients. Rounds 1 and 2 sent in September.</span>
+                <span class="campaign-card-sub">Win back past clients. Three email versions by segment.</span>
               </div>
               <div class="campaign-card-stats">
                 <div class="campaign-card-stat">
-                  <span class="campaign-card-stat-label">Picked so far</span>
-                  <span class="campaign-card-stat-value" x-text="selectionCounts.yes + selectionCounts.no + selectionCounts.later"></span>
+                  <span class="campaign-card-stat-label">Approved</span>
+                  <span class="campaign-card-stat-value" x-text="reengagement.counts.approved"></span>
                 </div>
                 <div class="campaign-card-stat">
-                  <span class="campaign-card-stat-label">Left to review</span>
-                  <span class="campaign-card-stat-value" x-text="selectionCounts.pending"></span>
+                  <span class="campaign-card-stat-label">To review</span>
+                  <span class="campaign-card-stat-value" x-text="reengagement.counts.to_review"></span>
                 </div>
                 <div class="campaign-card-stat">
-                  <span class="campaign-card-stat-label">Opens, round 1</span>
-                  <span class="campaign-card-stat-value">8</span>
+                  <span class="campaign-card-stat-label">Total contacts</span>
+                  <span class="campaign-card-stat-value" x-text="reengagementTotal"></span>
                 </div>
               </div>
               <div class="campaign-card-footer">
-                <span class="badge badge-warning" x-show="selectionCounts.pending > 0">Needs your picks</span>
+                <span class="badge badge-warning" x-show="reengagement.counts.to_review > 0" x-text="reengagement.counts.to_review + ' to review'"></span>
                 <span class="campaign-card-link">Open campaign →</span>
               </div>
             </button>
@@ -599,173 +599,137 @@
 
         <!-- CLIENT RE-ENGAGEMENT VIEW -->
         <section x-show="currentView === 'reengagement'" class="flex-col gap-lg">
-          <div class="summary-box" style="background: linear-gradient(120deg, #0e4d5c 0%, #116782 55%, #18a39a 100%); border-radius: 22px; padding: 28px; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px;">
-            <div style="display: flex; flex-direction: column; gap: 8px; max-width: 560px;">
+          <div class="summary-box" style="background: linear-gradient(120deg, #0e4d5c 0%, #116782 55%, #18a39a 100%); border-radius: 22px; padding: 28px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; max-width: 680px;">
               <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #cdeef1;">EMAIL CAMPAIGN</span>
               <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em;">Client Re-engagement</h1>
-              <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5;" x-text="selectedRound === 3 ? 'Pick which past clients get the Round 3 email. Tap Yes, No or Later. Every tap saves on its own.' : selectedRound === 2 ? 'Round 2 is approved and ready to launch. 26 contacts selected.' : 'Round 1 was sent in September. View results below.'"></p>
-            </div>
-            <div class="round-pills">
-              <button class="round-pill" :class="{ active: selectedRound === 1 }" @click="selectRound(1)">Round 1 (Sent · Sept)</button>
-              <button class="round-pill" :class="{ active: selectedRound === 2 }" @click="selectRound(2)">Round 2 (Approved · not yet sent)</button>
-              <button class="round-pill" :class="{ active: selectedRound === 3 }" @click="selectRound(3)">Round 3 (Jonathan picking)</button>
+              <p style="margin: 0; font-size: 15px; color: #dff4f6; line-height: 1.5;"><span x-text="reengagementTotal"></span> past clients grouped by email. Move contacts between tabs to build your send list. Each email goes out in three versions based on how long since they last worked with you.</p>
             </div>
           </div>
 
-          <!-- Results Card for Round 1 -->
-          <template x-if="selectedRound === 1">
-            <div class="card card-elevated" style="padding: 0; overflow: hidden;">
-              <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Round 1 Results</h2>
-                  <span style="font-size: 14px; color: var(--text-muted);">Sent September 2026</span>
-                </div>
-                <template x-if="isAdmin">
-                  <button class="btn btn-secondary btn-sm" @click="showResultsImportModal = true; resultsImportRound = 1">Import Results</button>
-                </template>
+          <!-- Campaign Results Card -->
+          <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+            <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 18px; font-weight: 700;">Campaign Results</h2>
+                <span style="font-size: 13px; color: var(--text-muted);">Sent September 2026</span>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1px; background: var(--border-light);">
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Sent</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.sent || '—'"></div>
-                </div>
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Delivered</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.delivered || '—'"></div>
-                </div>
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Opened</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.opened || '—'"></div>
-                </div>
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Clicked</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.clicked || '—'"></div>
-                </div>
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Bounced</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #b0592a;" x-text="emailResults[1]?.bounced || '—'"></div>
-                </div>
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Link scanners</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--text-muted);" x-text="emailResults[1]?.link_scanner_clicks || '—'"></div>
-                </div>
-                <div style="background: white; padding: 16px; text-align: center;">
-                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Booked jobs</div>
-                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #2e7d4f;" x-text="emailResults[1]?.booked_jobs || '—'"></div>
-                </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <span class="badge badge-success">Recent: <span x-text="reengagement.segmentCounts.recent"></span></span>
+                <span class="badge badge-warning">Lapsed: <span x-text="reengagement.segmentCounts.lapsed"></span></span>
+                <span class="badge badge-neutral">Dormant: <span x-text="reengagement.segmentCounts.dormant"></span></span>
               </div>
             </div>
-          </template>
-
-          <!-- Results Card for Round 2 -->
-          <template x-if="selectedRound === 2">
-            <div class="card card-elevated" style="padding: 0; overflow: hidden;">
-              <div style="padding: 20px 22px; border-bottom: 1px solid var(--border-light);">
-                <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20px; font-weight: 700;">Round 2 Status</h2>
-                <span style="font-size: 14px; color: var(--teal-700); font-weight: 600;">Approved, ready to launch</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1px; background: var(--border-light);">
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Sent</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.sent || '—'"></div>
               </div>
-              <div style="padding: 22px; display: flex; flex-direction: column; gap: 16px;">
-                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                  <div style="background: #f0faf8; border-radius: var(--radius-md); padding: 14px 18px; display: flex; flex-direction: column; gap: 4px;">
-                    <span style="font-size: 12px; color: var(--text-muted);">Approved contacts</span>
-                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 28px; font-weight: 700; color: var(--teal-700);" x-text="round2Counts.approved"></span>
-                  </div>
-                  <div style="background: #fef8e8; border-radius: var(--radius-md); padding: 14px 18px; display: flex; flex-direction: column; gap: 4px;">
-                    <span style="font-size: 12px; color: var(--text-muted);">Held (with notes)</span>
-                    <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 28px; font-weight: 700; color: #8a5a00;" x-text="round2Counts.held"></span>
-                  </div>
-                </div>
-                <div style="background: #f6f9fa; border-radius: var(--radius-md); padding: 16px; color: var(--text-muted); font-size: 14px;">
-                  Results will appear after launch.
-                </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Delivered</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700;" x-text="emailResults[1]?.delivered || '—'"></div>
+              </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Opened</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.opened || '—'"></div>
+              </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Clicked</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--teal-700);" x-text="emailResults[1]?.clicked || '—'"></div>
+              </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Bounced</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #b0592a;" x-text="emailResults[1]?.bounced || '—'"></div>
+              </div>
+              <div style="background: white; padding: 16px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Booked jobs</div>
+                <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: #2e7d4f;" x-text="emailResults[1]?.booked_jobs || '—'"></div>
               </div>
             </div>
-          </template>
+          </div>
 
-          <!-- Round 3 Selection UI -->
-          <template x-if="selectedRound === 3">
-            <div class="flex-col gap-lg">
-              <!-- Selection Counts -->
-              <div class="grid-4">
-                <div class="stat-card">
-                  <span class="stat-label">Yes</span>
-                  <span class="stat-value text-teal" x-text="selectionCounts.yes"></span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-label">No</span>
-                  <span class="stat-value" x-text="selectionCounts.no"></span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-label">Later</span>
-                  <span class="stat-value" style="color: #8a5a00;" x-text="selectionCounts.later"></span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-label">Not reviewed</span>
-                  <span class="stat-value" x-text="selectionCounts.pending"></span>
-                  <div style="height: 6px; background: #e7eef0; border-radius: var(--radius-full); overflow: hidden; margin-top: 6px;">
-                    <div style="height: 100%; border-radius: var(--radius-full); background: linear-gradient(90deg, #116782, #5eff00);" :style="'width: ' + reviewProgress + '%'"></div>
-                  </div>
-                </div>
-              </div>
+          <!-- 5-Tab Navigation -->
+          <div class="tabs">
+            <template x-for="tab in reengagementTabs" :key="tab.key">
+              <button class="tab" :class="{ active: reengagementTab === tab.key }" @click="changeReengagementTab(tab.key)">
+                <span x-text="tab.label"></span>
+                <span style="margin-left: 6px; opacity: 0.7;" x-text="'(' + tab.count + ')'"></span>
+              </button>
+            </template>
+          </div>
 
-              <!-- Info banner about exclusions -->
-              <div style="background: #e8f4f8; border: 1px solid #b8dce6; border-radius: var(--radius-md); padding: 14px 18px; font-size: 14px; color: #0e4d5c;">
-                Showing contacts not already approved for Round 2. <span x-text="round2Counts.approved"></span> contacts excluded.
-              </div>
+          <!-- Tab Description -->
+          <div style="background: #f8f9fa; border-radius: var(--radius-md); padding: 14px 18px; font-size: 14px; color: var(--text-secondary);">
+            <template x-if="reengagementTab === 'to_review'">
+              <span>Contacts waiting for your decision. Move to Approved to include in the next send.</span>
+            </template>
+            <template x-if="reengagementTab === 'approved'">
+              <span>Ready to send. These contacts will receive the next campaign email.</span>
+            </template>
+            <template x-if="reengagementTab === 'not_now'">
+              <span>Held for later. These won't be sent until you move them back to Approved.</span>
+            </template>
+            <template x-if="reengagementTab === 'already_contacted'">
+              <span>Already reached out through another channel. Won't receive campaign emails.</span>
+            </template>
+            <template x-if="reengagementTab === 'cant_email'">
+              <span>Invalid or bounced emails. These addresses won't receive any emails.</span>
+            </template>
+          </div>
 
-              <!-- Search & Filters -->
-              <div class="search-filters">
-                <input type="search" class="search-input" placeholder="Search company or contact" x-model="clientSearch">
-                <button class="filter-btn" @click="toggleSegmentFilter()">
-                  <span x-text="segmentFilter || 'All segments'"></span>
-                </button>
-                <button class="filter-btn" @click="toggleStatusFilter()">
-                  <span x-text="decisionFilter || 'Not reviewed'"></span>
-                </button>
-              </div>
+          <!-- Search -->
+          <div class="search-filters">
+            <input type="search" class="search-input" placeholder="Search email or company name" x-model="reengagementSearch">
+            <span style="font-size: 13px; color: var(--text-muted);" x-text="filteredReengagementContacts.length + ' contacts'"></span>
+          </div>
 
-              <!-- Client List -->
-              <div class="card card-elevated" style="padding: 0; overflow: hidden;">
-                <template x-for="client in filteredClients" :key="client.id">
-                  <div class="client-row">
-                    <div class="client-info">
-                      <span class="client-avatar" :style="'background: ' + getClientColor(client)">
-                        <span x-text="getClientInitials(client)"></span>
-                      </span>
-                      <div class="client-details">
-                        <div class="client-name-row">
-                          <span class="client-company" x-text="client.company"></span>
-                          <span class="badge badge-danger" x-show="client.do_not_send" style="font-size: 11px; padding: 4px 8px;">Do Not Send</span>
-                          <span class="badge badge-warning" x-show="client.hold" style="font-size: 11px; padding: 4px 8px;">On Hold</span>
-                          <span class="badge badge-success" x-show="client.client_status === 'existing_client'" style="font-size: 11px; padding: 4px 8px;">Existing</span>
-                        </div>
-                        <span class="client-meta" x-text="[client.contact_name, client.segment, client.county].filter(Boolean).join(' · ')"></span>
-                      </div>
+          <!-- Contact List -->
+          <div class="card card-elevated" style="padding: 0; overflow: hidden;">
+            <template x-for="contact in filteredReengagementContacts" :key="contact.id">
+              <div class="client-row" style="align-items: flex-start;">
+                <div class="client-info" style="flex: 1;">
+                  <span class="client-avatar" :class="getSegmentBadgeClass(contact.email_version)" style="width: 36px; height: 36px; font-size: 11px;">
+                    <span x-text="getSegmentLabel(contact.email_version).slice(0,3).toUpperCase()"></span>
+                  </span>
+                  <div class="client-details" style="flex: 1;">
+                    <div class="client-name-row" style="flex-wrap: wrap; gap: 6px;">
+                      <span class="client-company" x-text="contact.email" style="font-size: 14px;"></span>
+                      <span class="badge" :class="getSegmentBadgeClass(contact.email_version)" style="font-size: 10px; padding: 2px 6px;" x-text="getSegmentLabel(contact.email_version)"></span>
+                      <span class="badge badge-info" x-show="contact.rows_sharing_email > 1" style="font-size: 10px; padding: 2px 6px;" x-text="contact.rows_sharing_email + ' locations'"></span>
+                      <span class="badge badge-danger" x-show="contact.is_biloholding" style="font-size: 10px; padding: 2px 6px;">biloholding</span>
                     </div>
-                    <div class="toggle-group">
-                      <button class="toggle-btn yes" :class="{ active: client.decision === 'yes' }" @click="setDecision(client.id, 'yes')" :disabled="client.do_not_send">Yes</button>
-                      <button class="toggle-btn no" :class="{ active: client.decision === 'no' }" @click="setDecision(client.id, 'no')">No</button>
-                      <button class="toggle-btn later" :class="{ active: client.decision === 'later' }" @click="setDecision(client.id, 'later')">Later</button>
-                    </div>
+                    <span class="client-meta" style="font-size: 12px;" x-text="formatClientNames(contact.client_names)"></span>
+                    <template x-if="contact.status_reason">
+                      <span style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" x-text="contact.status_reason"></span>
+                    </template>
+                    <template x-if="contact.campaign1_status">
+                      <span style="font-size: 11px; color: #8a5a00; margin-top: 2px;">Campaign 1: <span x-text="contact.campaign1_status"></span></span>
+                    </template>
                   </div>
-                </template>
-                <template x-if="filteredClients.length === 0">
-                  <div class="empty-state">
-                    <div class="empty-state-title">No clients match your filters</div>
-                    <div class="empty-state-text">Try adjusting your search or filter criteria.</div>
-                  </div>
-                </template>
+                </div>
+                <div class="toggle-group" style="flex-wrap: wrap; gap: 4px;">
+                  <template x-if="reengagementTab !== 'approved'">
+                    <button class="toggle-btn yes" @click="updateReengagementStatus(contact.id, 'approved')" :disabled="contact.status === 'cant_email'">Approve</button>
+                  </template>
+                  <template x-if="reengagementTab !== 'not_now'">
+                    <button class="toggle-btn later" @click="updateReengagementStatus(contact.id, 'not_now')">Not now</button>
+                  </template>
+                  <template x-if="reengagementTab !== 'already_contacted'">
+                    <button class="toggle-btn" style="background: #e8f4f8; color: #0e4d5c;" @click="updateReengagementStatus(contact.id, 'already_contacted')">Contacted</button>
+                  </template>
+                  <template x-if="reengagementTab !== 'cant_email' && reengagementTab !== 'to_review'">
+                    <button class="toggle-btn" style="background: #f8f9fa; color: var(--text-muted);" @click="updateReengagementStatus(contact.id, 'to_review')">Back to review</button>
+                  </template>
+                </div>
               </div>
-
-              <!-- Admin Lock Button -->
-              <div x-show="isAdmin" style="display: flex; justify-content: flex-end; gap: 12px;">
-                <button class="btn btn-secondary" @click="showImportModal = true">Import Clients</button>
-                <button class="btn btn-primary" @click="lockRound()" :disabled="selectionCounts.yes === 0">
-                  Lock Round (exports <span x-text="selectionCounts.yes"></span> clients)
-                </button>
+            </template>
+            <template x-if="filteredReengagementContacts.length === 0">
+              <div class="empty-state">
+                <div class="empty-state-title" x-text="reengagementSearch ? 'No contacts match your search' : 'No contacts in this tab'"></div>
+                <div class="empty-state-text" x-text="reengagementSearch ? 'Try a different search term.' : 'Move contacts here from other tabs.'"></div>
               </div>
-            </div>
-          </template>
+            </template>
+          </div>
         </section>
 
         <!-- Results Import Modal -->

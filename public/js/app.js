@@ -92,6 +92,16 @@ function app() {
     emailResults: {},
     round2Counts: { approved: 0, held: 0 },
 
+    // Reengagement data
+    reengagement: {
+      counts: { to_review: 0, approved: 0, not_now: 0, already_contacted: 0, cant_email: 0 },
+      segmentCounts: { recent: 0, lapsed: 0, dormant: 0 },
+      contacts: [],
+      campaignResults: []
+    },
+    reengagementTab: 'to_review',
+    reengagementSearch: '',
+
     // Stats (computed from data)
     stats: {
       calls: null,
@@ -148,6 +158,33 @@ function app() {
       if (total === 0) return 0;
       const reviewed = this.selectionCounts.yes + this.selectionCounts.no + this.selectionCounts.later;
       return Math.round((reviewed / total) * 100);
+    },
+
+    // Computed: total reengagement contacts
+    get reengagementTotal() {
+      const c = this.reengagement.counts;
+      return c.to_review + c.approved + c.not_now + c.already_contacted + c.cant_email;
+    },
+
+    // Computed: filtered reengagement contacts
+    get filteredReengagementContacts() {
+      if (!this.reengagementSearch) return this.reengagement.contacts;
+      const search = this.reengagementSearch.toLowerCase();
+      return this.reengagement.contacts.filter(c =>
+        c.email?.toLowerCase().includes(search) ||
+        c.client_names?.some(n => n.toLowerCase().includes(search))
+      );
+    },
+
+    // Computed: reengagement tab labels
+    get reengagementTabs() {
+      return [
+        { key: 'to_review', label: 'To review', count: this.reengagement.counts.to_review },
+        { key: 'approved', label: 'Approved', count: this.reengagement.counts.approved },
+        { key: 'not_now', label: 'Not now', count: this.reengagement.counts.not_now },
+        { key: 'already_contacted', label: 'Already contacted', count: this.reengagement.counts.already_contacted },
+        { key: 'cant_email', label: "Can't email", count: this.reengagement.counts.cant_email }
+      ];
     },
 
     // Computed: filtered clients
@@ -418,7 +455,8 @@ function app() {
         this.loadCallSheet(),
         this.loadEmailResults(),
         this.loadRound2Counts(),
-        this.loadWorkingOn()
+        this.loadWorkingOn(),
+        this.loadReengagement()
       ]);
     },
 
@@ -688,6 +726,86 @@ function app() {
       } catch (e) {
         console.log('Round 2 counts not available yet');
       }
+    },
+
+    // Load reengagement data
+    async loadReengagement(status = null) {
+      try {
+        const tab = status || this.reengagementTab;
+        const res = await fetch(`/api/reengagement?status=${tab}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.reengagement.counts = data.counts || this.reengagement.counts;
+          this.reengagement.segmentCounts = data.segmentCounts || this.reengagement.segmentCounts;
+          this.reengagement.contacts = data.contacts || [];
+          this.reengagement.campaignResults = data.campaignResults || [];
+        }
+      } catch (e) {
+        console.log('Reengagement data not available yet');
+      }
+    },
+
+    // Change reengagement tab
+    async changeReengagementTab(tab) {
+      this.reengagementTab = tab;
+      this.reengagementSearch = '';
+      await this.loadReengagement(tab);
+    },
+
+    // Update reengagement contact status
+    async updateReengagementStatus(contactId, newStatus) {
+      const contact = this.reengagement.contacts.find(c => c.id === contactId);
+      if (!contact) return;
+
+      const previousStatus = contact.status;
+      contact.status = newStatus;
+
+      try {
+        const res = await fetch('/api/reengagement', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: contactId, status: newStatus })
+        });
+
+        if (res.ok) {
+          // Reload to get updated counts
+          await this.loadReengagement();
+        } else {
+          contact.status = previousStatus;
+          console.error('Failed to update status');
+        }
+      } catch (e) {
+        contact.status = previousStatus;
+        console.error('Failed to update status:', e);
+      }
+    },
+
+    // Get segment badge class
+    getSegmentBadgeClass(emailVersion) {
+      const classes = {
+        recent: 'badge-success',
+        lapsed: 'badge-warning',
+        dormant: 'badge-neutral'
+      };
+      return classes[emailVersion] || 'badge-neutral';
+    },
+
+    // Get segment label
+    getSegmentLabel(emailVersion) {
+      const labels = {
+        recent: 'Recent',
+        lapsed: 'Lapsed',
+        dormant: 'Dormant'
+      };
+      return labels[emailVersion] || emailVersion;
+    },
+
+    // Format client names for display
+    formatClientNames(names) {
+      if (!names || !Array.isArray(names)) return '';
+      if (names.length === 1) return names[0];
+      if (names.length <= 3) return names.join(', ');
+      return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
     },
 
     // Select round and reload clients

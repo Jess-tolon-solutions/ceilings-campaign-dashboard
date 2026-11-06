@@ -78,15 +78,15 @@ test.describe('Social Reporting Tab', () => {
     // Check for LinkedIn admin form (may not be visible if not admin)
     const linkedinForm = page.locator('text=Enter LinkedIn Metrics');
 
-    // Just check the page loads without errors
-    await expect(page.locator('.tabs')).toBeVisible();
+    // Just check the page loads without errors - use specific selector for Monthly Performance tabs
+    await expect(page.locator('button.tab:has-text("Social Reporting")')).toBeVisible();
   });
 
   test('should display month-over-month arrows when previous data exists', async ({ page }) => {
     // If data exists, look for change indicators
     const changeIndicator = page.locator('text=/↑|↓/');
 
-    // This is optional - just verify the page structure
-    await expect(page.locator('.tabs')).toBeVisible();
+    // This is optional - just verify the page structure - use specific selector for Monthly Performance tabs
+    await expect(page.locator('button.tab:has-text("Social Reporting")')).toBeVisible();
   });
 });
